@@ -41,7 +41,13 @@
         }
 
         .poem-line {
-            font-size: 1.75rem;
+            /* MODIFIED: Using clamp() for fluid typography.
+              - font-size: clamp(MINIMUM, DYNAMIC, MAXIMUM);
+              - 1.25rem = Smallest font (mobile)
+              - 2.2vw   = Scales with viewport width
+              - 1.75rem = Largest font (desktop)
+            */
+            font-size: clamp(1.25rem, 2.2vw, 1.75rem);
             line-height: 1.6;
             min-height: 1.6em; /* Prevents layout jump */
             opacity: 0;
@@ -73,7 +79,8 @@
         }
         
         #poem-title-numeral {
-            font-size: 5rem;
+            /* MODIFIED: Using clamp() for fluid typography. */
+            font-size: clamp(3.5rem, 7vw, 5rem);
             font-weight: 700;
             transform: scale(0.9);
             opacity: 0;
@@ -82,7 +89,8 @@
 
         /* NEW: Loading Indicator */
         #loading {
-            font-size: 2rem;
+            /* MODIFIED: Using clamp() for fluid typography. */
+            font-size: clamp(1.5rem, 4vw, 2rem);
             position: fixed;
             inset: 0;
             display: grid;
@@ -154,17 +162,9 @@
                 padding: 1rem; /* Tighter padding for small screens */
             }
 
-            .poem-line {
-                font-size: 1.5rem; /* Smaller base font for mobile */
-            }
-
-            #poem-title-numeral {
-                font-size: 3.5rem; /* Smaller title font for mobile */
-            }
-
-            #loading {
-                font-size: 1.5rem; /* Smaller loading font */
-            }
+            /* REMOVED: The font-size rules are no longer needed here,
+              as clamp() handles all screen sizes dynamically.
+            */
         }
 
     </style>
@@ -429,47 +429,42 @@
             // --- Phase 1: Slow Color Morph ---
             hue = (hue + morphSpeed) % 360;
             
+            // --- DEFAULT STATE (Smooth Morph) ---
+            // We set the default smooth morph values first.
             let currentBgHue = hue;
             let currentFontHue = (hue + 180) % 360;
-            let currentBgLightness = 10;
-            let currentFontLightness = 90;
+            
+            // Default: slowly oscillate lightness (This was the bug, it was in an 'else' block)
+            const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
+            let currentBgLightness = 10 + (lightnessOscillation * 20); // 10% to 30%
+            let currentFontLightness = 90 - (lightnessOscillation * 20); // 90% to 70%
 
-            // --- Phase 2: Flashing ---
+
+            // --- Phase 2: Flashing (Override) ---
             if (isFlashing) {
                 if (timestamp - lastFlashTime > flashInterval) {
-                    // Invert colors
-                    currentBgHue = (hue + flashHueJump) % 360;
-                    currentFontHue = hue % 360;
+                    // This is a FLASH FRAME. Override the morph values.
+                    currentBgHue = (hue + flashHueJump) % 360; // Inverted hue
+                    currentFontHue = hue % 360; // Inverted hue
                     
-                    // Alternate between light/dark
-                    if (Math.random() > 0.5) {
-                        currentBgLightness = 90;
-                        currentFontLightness = 10;
-                    } else {
-                        currentBgLightness = 10;
-                        currentFontLightness = 90;
-                    }
+                    // --- MODIFIED ---
+                    // Removed Math.random() for a predictable flash.
+                    // Default is dark bg (10-30) / light font (70-90).
+                    // Flash will *always* be light bg / dark font.
+                    currentBgLightness = 90;
+                    currentFontLightness = 10;
                     
                     lastFlashTime = timestamp;
                 }
+                // ELSE (This is a NON-FLASH FRAME)
+                // We do nothing, and the default smooth morph values from above will be used.
+                // This fixes the "jolt" bug.
             }
             
-            // Always ensure high contrast
-            let bgLight = currentBgLightness;
-            let fontLight = currentFontLightness;
-            if (isFlashing) {
-                // During flash, just use the calculated values
-            } else {
-                // During morph, slowly oscillate lightness
-                const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
-                bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
-                fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
-            }
-
-
             // Apply colors
-            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, 80%, ${bgLight}%)`);
-            body.style.setProperty('--font-color', `hsl(${currentFontHue}, 80%, ${fontLight}%)`);
+            // This section is now simpler and just applies the final calculated values.
+            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, 80%, ${currentBgLightness}%)`);
+            body.style.setProperty('--font-color', `hsl(${currentFontHue}, 80%, ${currentFontLightness}%)`);
 
             requestAnimationFrame(colorLoop);
         }
