@@ -224,9 +224,9 @@
         async function loadAndParsePoems() {
             try {
                 // --- MODIFIED AS REQUESTED ---
-                // Changed from a relative path ('poems.txt') to a full, absolute URL.
-                // This URL is built dynamically based on the page's current location.
-                const poemsUrl = new URL('dickinson.txt', window.location.href).href;
+                // Now pointing to the specific "raw" URL for your GitHub file.
+                // We use raw.githubusercontent.com, not github.com, to get the plain text.
+                const poemsUrl = 'https://raw.githubusercontent.com/MTvrimPossible/dickinson/main/dickinson.txt';
                 console.log(`Attempting to fetch poems from: ${poemsUrl}`);
                 // -----------------------------
 
