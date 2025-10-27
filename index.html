@@ -20,7 +20,8 @@
             /* Color variables will be set by JavaScript */
             background-color: var(--bg-color, #111);
             color: var(--font-color, #eee);
-            transition: background-color 0.5s linear, color 0.5s linear;
+            /* UPDATED: Faster transition for the flash. 0.5s was too slow */
+            transition: background-color 0.1s linear, color 0.1s linear;
         }
 
         #poem-container {
@@ -77,7 +78,7 @@
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
-            transition: opacity 1.2s ease-in-out; /* Transition for the overlay itself */
+            transition: opacity 1.2s ease-in-out, background-color 0.1s linear, color 0.1s linear; /* Added color transition */
         }
         
         #poem-title-numeral {
@@ -118,7 +119,8 @@
         /* --- PHASES FOR EFFECTS --- */
 
         /* Phase 3: Lenticular/Shiny Text */
-        body.phase-3 .poem-line {
+        body.phase-3 .poem-line,
+        body.phase-3 #poem-title-numeral { /* ADDED: Title also gets polychrome */
             background-image: linear-gradient(
                 -45deg,
                 /* REMOVED bright yellow for readability */
@@ -141,7 +143,6 @@
         }
 
         /* Phase 4 Keyframes */
-        /* UPDATED: More chaotic/faster flicker */
         @keyframes flicker-bright {
             0%, 100% { filter: brightness(1); }
             10% { filter: brightness(0.7); }
@@ -156,7 +157,8 @@
         }
 
         /* Phase 4: Text Flicker */
-        body.phase-4 .poem-line {
+        body.phase-4 .poem-line,
+        body.phase-4 #poem-title-numeral { /* ADDED: Title also flickers */
             /* UPDATED: Flicker animation is now 0.2s, not 0.8s */
             animation: shine 8s linear infinite, flicker-bright 0.2s linear infinite;
             /* UPDATED: Matching white glow for readability */
@@ -207,7 +209,7 @@
         let flashInterval = 1000;
         let lastFlashTime = 0;
         let flashAccelerationStartTime = 0;
-        let isCurrentlyFlashing = false; // NEW: Tracks if we are in the 100ms flash duration
+        let isCurrentlyFlashing = false; 
 
         // --- TIMING CONSTANTS ---
         const LINE_FADE_IN = 1200;
@@ -215,7 +217,7 @@
         const LINE_VISIBLE = 2500;
         const STANZA_DELAY = 1000;
         const POEM_DELAY = 2000;
-        const FLASH_DURATION = 100; // NEW: The flash will last for 100ms
+        const FLASH_DURATION = 100; // The flash will last for 100ms
 
         const PHASE_2_START_TIME = 5 * 60 * 1000;  // 5 minutes: Flashing starts
         const PHASE_3_START_TIME = 15 * 60 * 1000; // 15 minutes: Shiny text starts
@@ -331,6 +333,11 @@
             body.classList.add('showing-title');
             titleOverlay.style.pointerEvents = 'auto';
             titleOverlay.style.opacity = 1;
+            
+            // Apply phase 3/4 classes if active
+            if (isPhase3) titleOverlay.classList.add('phase-3');
+            if (body.classList.contains('phase-4')) titleOverlay.classList.add('phase-4');
+
 
             await wait(100); // Wait for CSS transition to register
             titleNumeral.style.opacity = 1;
@@ -349,6 +356,8 @@
             
             body.classList.remove('showing-title');
             titleOverlay.style.pointerEvents = 'none';
+            // Clean up phase classes
+            titleOverlay.classList.remove('phase-3', 'phase-4');
         }
 
         /**
@@ -421,18 +430,21 @@
         const morphSpeed = 0.01; 
         const flashHueJump = 180; 
 
+        // *** NEW, REBUILT colorLoop FUNCTION ***
         function colorLoop(timestamp) {
             hue = (hue + morphSpeed) % 360;
             
-            // --- Default: Slow morphing lightness ---
             const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
+
+            // --- Default State (Dark BG, Light Font) ---
             let bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
             let fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
             let currentBgHue = hue;
             let currentFontHue = (hue + 180) % 360;
+            let bgSat = 20; // Low saturation BG
+            let fontSat = 80; // High saturation Font
 
             // --- Phase 2: Flashing ---
-            // UPDATED LOGIC: Flash now lasts for FLASH_DURATION (100ms)
             if (isFlashing) {
                 const now = timestamp;
 
@@ -444,26 +456,32 @@
 
                 // Check if we are CURRENTLY in a flash state
                 if (isCurrentlyFlashing) {
-                    // We are in a flash. Apply flash colors.
+                    // We are in a flash. INVERT everything.
+                    // Hues are swapped
                     currentBgHue = (hue + flashHueJump) % 360;
-                    currentFontHue = hue % 360;
-                    bgLight = 90; // Flash to light background
-                    fontLight = 10; // Flash to dark font
+                    currentFontHue = hue;
+                    
+                    // Lightness is swapped
+                    bgLight = 90 - (lightnessOscillation * 20); // 90% to 70%
+                    fontLight = 10 + (lightnessOscillation * 20); // 10% to 30%
+                    
+                    // Saturations remain the same (low BG, high Font)
+                    // This creates the "light-tint bg" and "dark-vivid font"
+                    bgSat = 20;
+                    fontSat = 80;
 
                     // Check if the flash duration has ended
                     if (now - lastFlashTime > FLASH_DURATION) {
                         isCurrentlyFlashing = false;
-                        // We don't update lastFlashTime here. 
-                        // It stays as the start time of the *last* flash.
-                        // The interval is the "time between flashes".
+                        // The default state (defined above) will take over on the next frame
                     }
                 }
-                // On frames *between* flashes, the default morph logic above runs.
+                // On frames *between* flashes, the default state logic runs.
             }
             
             // Apply colors
-            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, 20%, ${bgLight}%)`);
-            body.style.setProperty('--font-color', `hsl(${currentFontHue}, 80%, ${fontLight}%)`);
+            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, ${bgSat}%, ${bgLight}%)`);
+            body.style.setProperty('--font-color', `hsl(${currentFontHue}, ${fontSat}%, ${fontLight}%)`);
 
             requestAnimationFrame(colorLoop);
         }
