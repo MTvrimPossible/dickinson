@@ -77,7 +77,6 @@
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
-            /* UPDATED: transition speed to 1.2s */
             transition: opacity 1.2s ease-in-out; /* Transition for the overlay itself */
         }
         
@@ -87,7 +86,6 @@
             font-weight: 700;
             transform: scale(0.9);
             opacity: 0;
-            /* UPDATED: transition speed to 1.2s */
             transition: opacity 1.2s ease-in-out, transform 1.2s ease-in-out;
         }
 
@@ -131,10 +129,9 @@
             background-clip: text;
             -webkit-background-clip: text;
             color: transparent;
-            /* SLOWED down from 3s to 8s */
             animation: shine 8s linear infinite;
-            /* ADDED shadow for readability */
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+            /* UPDATED: Switched to a white glow for readability on all backgrounds */
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.6), 0 0 2px rgba(255, 255, 255, 0.8);
         }
 
         @keyframes shine {
@@ -144,22 +141,26 @@
         }
 
         /* Phase 4 Keyframes */
+        /* UPDATED: More chaotic/faster flicker */
         @keyframes flicker-bright {
             0%, 100% { filter: brightness(1); }
-            20% { filter: brightness(1); }
-            22% { filter: brightness(0.4); }
-            25% { filter: brightness(1); }
-            50% { filter: brightness(1); }
-            52% { filter: brightness(0.5); }
-            56% { filter: brightness(1); }
+            10% { filter: brightness(0.7); }
+            20% { filter: brightness(1.2); }
+            30% { filter: brightness(0.5); }
+            40% { filter: brightness(1); }
+            50% { filter: brightness(0.8); }
+            60% { filter: brightness(1.1); }
+            70% { filter: brightness(0.6); }
+            80% { filter: brightness(1); }
+            90% { filter: brightness(0.7); }
         }
 
         /* Phase 4: Text Flicker */
         body.phase-4 .poem-line {
-            /* We stack the animations, matching the new 8s speed */
-            animation: shine 8s linear infinite, flicker-bright 0.8s linear infinite;
-            /* ADDED shadow for readability (to match phase-3) */
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+            /* UPDATED: Flicker animation is now 0.2s, not 0.8s */
+            animation: shine 8s linear infinite, flicker-bright 0.2s linear infinite;
+            /* UPDATED: Matching white glow for readability */
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.6), 0 0 2px rgba(255, 255, 255, 0.8);
         }
 
     </style>
@@ -206,6 +207,7 @@
         let flashInterval = 1000;
         let lastFlashTime = 0;
         let flashAccelerationStartTime = 0;
+        let isCurrentlyFlashing = false; // NEW: Tracks if we are in the 100ms flash duration
 
         // --- TIMING CONSTANTS ---
         const LINE_FADE_IN = 1200;
@@ -213,17 +215,16 @@
         const LINE_VISIBLE = 2500;
         const STANZA_DELAY = 1000;
         const POEM_DELAY = 2000;
+        const FLASH_DURATION = 100; // NEW: The flash will last for 100ms
 
         const PHASE_2_START_TIME = 5 * 60 * 1000;  // 5 minutes: Flashing starts
         const PHASE_3_START_TIME = 15 * 60 * 1000; // 15 minutes: Shiny text starts
         const FLASH_ACCELERATION_DURATION = 10 * 60 * 1000; // 10 minutes (from min 5 to min 15)
         const FLASH_INTERVAL_START = 1000; // 1 flash per second
         const FLASH_INTERVAL_END = 100;    // 10 flashes per second
-        /* UPDATED: Phase 4 starts at 15 min, with Phase 3 */
         const PHASE_4_START_TIME = 15 * 60 * 1000; // 15 minutes: Flicker text starts
 
         // Title Flash Timing
-        /* UPDATED: Speeds to match poem line fade */
         const TIME_TITLE_FADE_IN = 1200;
         const TIME_TITLE_VISIBLE = 2000;
         const TIME_TITLE_FADE_OUT = 1200;
@@ -431,22 +432,36 @@
             let currentFontHue = (hue + 180) % 360;
 
             // --- Phase 2: Flashing ---
+            // UPDATED LOGIC: Flash now lasts for FLASH_DURATION (100ms)
             if (isFlashing) {
-                if (timestamp - lastFlashTime > flashInterval) {
-                    // Flash: Invert colors and lightness
+                const now = timestamp;
+
+                // Check if it's time to START a new flash
+                if (!isCurrentlyFlashing && (now - lastFlashTime > flashInterval)) {
+                    isCurrentlyFlashing = true;
+                    lastFlashTime = now; // Mark the start of the flash
+                }
+
+                // Check if we are CURRENTLY in a flash state
+                if (isCurrentlyFlashing) {
+                    // We are in a flash. Apply flash colors.
                     currentBgHue = (hue + flashHueJump) % 360;
                     currentFontHue = hue % 360;
                     bgLight = 90; // Flash to light background
                     fontLight = 10; // Flash to dark font
-                    
-                    lastFlashTime = timestamp;
+
+                    // Check if the flash duration has ended
+                    if (now - lastFlashTime > FLASH_DURATION) {
+                        isCurrentlyFlashing = false;
+                        // We don't update lastFlashTime here. 
+                        // It stays as the start time of the *last* flash.
+                        // The interval is the "time between flashes".
+                    }
                 }
-                // On frames *between* flashes, the default morph logic above runs,
-                // restoring the smooth, slow transition.
+                // On frames *between* flashes, the default morph logic above runs.
             }
             
             // Apply colors
-            /* UPDATED: Reduced background saturation for readability */
             body.style.setProperty('--bg-color', `hsl(${currentBgHue}, 20%, ${bgLight}%)`);
             body.style.setProperty('--font-color', `hsl(${currentFontHue}, 80%, ${fontLight}%)`);
 
