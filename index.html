@@ -367,10 +367,11 @@
                 const line = stanza[i] || ""; // Get line or empty string
                 const el = lineElements[i];
                 
-                // --- Font shrinking logic ---
+                // --- NEW Font shrinking & wrapping logic ---
                 
-                // 1. Reset font size from previous line
+                // 1. Reset styles from previous line
                 el.style.fontSize = ''; 
+                el.style.whiteSpace = 'nowrap'; // Reset to default 'nowrap'
                 
                 // 2. Set new line content
                 const processedLine = line.replace(/\s*-\s*/g, '<span class="em-dash">—</span>');
@@ -380,14 +381,23 @@
                 const defaultFontSize = parseFloat(window.getComputedStyle(el).fontSize);
 
                 // 4. Check for overflow
-                // MODIFIED: Check against the PARENT container's width, which is more stable
+                // Check against the PARENT container's width, which is more stable
                 if (el.scrollWidth > (stanzaContainer.clientWidth * 0.99)) {
-                    // 5. Calculate and apply new font size
-                    // MODIFIED: Use the PARENT container's width for the ratio
+                    // 5. It overflows. Try to shrink it.
+                    // Use the PARENT container's width for the ratio
                     const ratio = stanzaContainer.clientWidth / el.scrollWidth;
                     // Apply ratio, but don't go below 12px
                     const newFontSize = Math.max(Math.floor(defaultFontSize * ratio), 12); 
                     el.style.fontSize = `${newFontSize}px`;
+
+                    // 6. RE-CHECK: After shrinking, does it *still* overflow?
+                    // We force the browser to recalculate layout by reading a property
+                    (void)el.offsetWidth; 
+
+                    if (el.scrollWidth > (stanzaContainer.clientWidth * 0.99)) {
+                        // 7. FALLBACK: It's still too long. Wrap the line.
+                        el.style.whiteSpace = 'normal';
+                    }
                 }
                 // --- End of new logic ---
                 
