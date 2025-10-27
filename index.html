@@ -77,7 +77,8 @@
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
-            transition: opacity 0.8s ease-in-out; /* Transition for the overlay itself */
+            /* UPDATED: transition speed to 1.2s */
+            transition: opacity 1.2s ease-in-out; /* Transition for the overlay itself */
         }
         
         #poem-title-numeral {
@@ -86,7 +87,8 @@
             font-weight: 700;
             transform: scale(0.9);
             opacity: 0;
-            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            /* UPDATED: transition speed to 1.2s */
+            transition: opacity 1.2s ease-in-out, transform 1.2s ease-in-out;
         }
 
         /* Loading Indicator */
@@ -121,7 +123,7 @@
         body.phase-3 .poem-line {
             background-image: linear-gradient(
                 -45deg,
-                /* REMOVED bright yellow (#fffb00) for readability */
+                /* REMOVED bright yellow for readability */
                 #ff0000, #ff7300, #48ff00,
                 #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
             );
@@ -217,12 +219,14 @@
         const FLASH_ACCELERATION_DURATION = 10 * 60 * 1000; // 10 minutes (from min 5 to min 15)
         const FLASH_INTERVAL_START = 1000; // 1 flash per second
         const FLASH_INTERVAL_END = 100;    // 10 flashes per second
-        const PHASE_4_START_TIME = 15 * 60 * 1000; // 15 minutes: Flicker text starts (same as Phase 3)
+        /* UPDATED: Phase 4 starts at 15 min, with Phase 3 */
+        const PHASE_4_START_TIME = 15 * 60 * 1000; // 15 minutes: Flicker text starts
 
         // Title Flash Timing
-        const TIME_TITLE_FADE_IN = 500;
+        /* UPDATED: Speeds to match poem line fade */
+        const TIME_TITLE_FADE_IN = 1200;
         const TIME_TITLE_VISIBLE = 2000;
-        const TIME_TITLE_FADE_OUT = 800;
+        const TIME_TITLE_FADE_OUT = 1200;
 
         // --- POEM DISPLAY LOGIC ---
 
@@ -327,10 +331,11 @@
             titleOverlay.style.pointerEvents = 'auto';
             titleOverlay.style.opacity = 1;
 
-            await wait(100); 
+            await wait(100); // Wait for CSS transition to register
             titleNumeral.style.opacity = 1;
             titleNumeral.style.transform = 'scale(1)';
 
+            // Hold (TIME_TITLE_VISIBLE) minus the fade-in time
             await wait(TIME_TITLE_VISIBLE);
 
             // Fade out the entire overlay
@@ -338,6 +343,7 @@
             titleNumeral.style.opacity = 0; 
             titleNumeral.style.transform = 'scale(0.9)';
             
+            // Wait for the fade-out transition to complete
             await wait(TIME_TITLE_FADE_OUT); 
             
             body.classList.remove('showing-title');
@@ -354,7 +360,7 @@
                 const line = stanza[i] || ""; // Get line or empty string
                 const el = lineElements[i];
                 
-                // --- NEW Font shrinking logic (no wrap) ---
+                // --- Font shrinking logic (no wrap) ---
                 
                 // 1. Reset styles from previous line
                 el.style.fontSize = ''; 
@@ -440,7 +446,7 @@
             }
             
             // Apply colors
-            /* REDUCED background saturation for readability */
+            /* UPDATED: Reduced background saturation for readability */
             body.style.setProperty('--bg-color', `hsl(${currentBgHue}, 20%, ${bgLight}%)`);
             body.style.setProperty('--font-color', `hsl(${currentFontHue}, 80%, ${fontLight}%)`);
 
@@ -475,6 +481,7 @@
             if (allPoems.length > 0) {
                 loadingOverlay.classList.add('hidden');
                 
+                // Start all timers
                 setTimeout(() => {
                     console.log("--- PHASE 2: Flashing Started ---");
                     isFlashing = true;
@@ -492,6 +499,7 @@
                     body.classList.add('phase-4');
                 }, PHASE_4_START_TIME);
 
+                // Start the poem display
                 startNewPoem();
             }
             // If poems didn't load, the error message will remain.
