@@ -239,13 +239,22 @@
                 // 1. Split the file by the Roman numeral headers.
                 // This regex looks for: (Newline)(one or more Roman chars)(Period)(Newline)
                 // The capture group `()` keeps the delimiter (the numeral) in the resulting array.
-                const parts = text.split(/\n([IVXLCDM]+)\.\n/);
+                
+                // --- EDITED LINE ---
+                // Original: const parts = text.split(/\n([IVXLCDM]+)\.\n/);
+                // This new regex handles the numeral at the start of the file (^\n*)
+                // OR after a blank line (\n\n). It also creates two capture groups.
+                const parts = text.split(/(^\n*|\n\n)([IVXLCDM]+)\.\n/);
 
                 // 2. Process the parts into the poem structure
-                // The split results in: ["", "I", "Poem 1 text...", "II", "Poem 2 text...", ...]
-                for (let i = 1; i < parts.length; i += 2) {
-                    const title = parts[i].trim(); // This is the Roman numeral, e.g., "I"
-                    const poemText = parts[i + 1];
+                // The split results in: ["", "", "I", "Poem 1...", "\n\n", "II", "Poem 2..."]
+                // We must now increment by 3
+                for (let i = 1; i < parts.length; i += 3) {
+                    // --- EDITED LINES ---
+                    // The title is in the second capture group (i+1)
+                    // The text is the part after the split (i+2)
+                    const title = parts[i + 1].trim(); // This is the Roman numeral, e.g., "I"
+                    const poemText = parts[i + 2];
 
                     if (!poemText) continue;
 
