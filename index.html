@@ -172,7 +172,7 @@
 
     <script>
         // --- POEM DATA ---
-        // This will be filled by fetching poems.
+        // This will be filled by fetching poems.txt
         let allPoems = [];
 
         // --- DOM REFERENCES ---
@@ -223,7 +223,14 @@
          */
         async function loadAndParsePoems() {
             try {
-                const response = await fetch('dickinson.txt');
+                // --- MODIFIED AS REQUESTED ---
+                // Changed from a relative path ('poems.txt') to a full, absolute URL.
+                // This URL is built dynamically based on the page's current location.
+                const poemsUrl = new URL('dickinson.txt', window.location.href).href;
+                console.log(`Attempting to fetch poems from: ${poemsUrl}`);
+                // -----------------------------
+
+                const response = await fetch(poemsUrl);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -513,5 +520,4 @@
 
     </script>
 </body>
-
 </html>
