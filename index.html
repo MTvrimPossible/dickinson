@@ -121,14 +121,18 @@
         body.phase-3 .poem-line {
             background-image: linear-gradient(
                 -45deg,
-                #ff0000, #ff7300, #fffb00, #48ff00,
+                /* REMOVED bright yellow (#fffb00) for readability */
+                #ff0000, #ff7300, #48ff00,
                 #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
             );
             background-size: 200% auto;
             background-clip: text;
             -webkit-background-clip: text;
             color: transparent;
-            animation: shine 3s linear infinite;
+            /* SLOWED down from 3s to 8s */
+            animation: shine 8s linear infinite;
+            /* ADDED shadow for readability */
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
         }
 
         @keyframes shine {
@@ -150,7 +154,10 @@
 
         /* Phase 4: Text Flicker */
         body.phase-4 .poem-line {
-            animation: shine 3s linear infinite, flicker-bright 0.8s linear infinite;
+            /* We stack the animations, matching the new 8s speed */
+            animation: shine 8s linear infinite, flicker-bright 0.8s linear infinite;
+            /* ADDED shadow for readability (to match phase-3) */
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
         }
 
     </style>
@@ -205,12 +212,12 @@
         const STANZA_DELAY = 1000;
         const POEM_DELAY = 2000;
 
-        const PHASE_2_START_TIME = 5 * 60 * 1000;  // 5 minutes
-        const PHASE_3_START_TIME = 15 * 60 * 1000; // 15 minutes
-        const FLASH_ACCELERATION_DURATION = 10 * 60 * 1000; // 10 minutes
+        const PHASE_2_START_TIME = 5 * 60 * 1000;  // 5 minutes: Flashing starts
+        const PHASE_3_START_TIME = 15 * 60 * 1000; // 15 minutes: Shiny text starts
+        const FLASH_ACCELERATION_DURATION = 10 * 60 * 1000; // 10 minutes (from min 5 to min 15)
         const FLASH_INTERVAL_START = 1000; // 1 flash per second
-        const FLASH_INTERVAL_END = 100;    // 10 flashes per second (CAPPED for safety)
-        const PHASE_4_START_TIME = 20 * 60 * 1000; // 20 minutes
+        const FLASH_INTERVAL_END = 100;    // 10 flashes per second
+        const PHASE_4_START_TIME = 15 * 60 * 1000; // 15 minutes: Flicker text starts (same as Phase 3)
 
         // Title Flash Timing
         const TIME_TITLE_FADE_IN = 500;
@@ -226,9 +233,7 @@
             try {
                 // Pointing to the GitHub Pages URL.
                 let poemsUrl = 'https://MTvrimPossible.github.io/dickinson/dickinson.txt';
-
-                // REMOVED the cache-busting parameter that was causing the hang.
-
+                
                 console.log(`Attempting to fetch poems from: ${poemsUrl}`);
 
                 const response = await fetch(poemsUrl);
@@ -435,7 +440,8 @@
             }
             
             // Apply colors
-            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, 80%, ${bgLight}%)`);
+            /* REDUCED background saturation for readability */
+            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, 20%, ${bgLight}%)`);
             body.style.setProperty('--font-color', `hsl(${currentFontHue}, 80%, ${fontLight}%)`);
 
             requestAnimationFrame(colorLoop);
