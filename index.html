@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dickinson Poems</title>
-    <!-- Importing 'Cinzel' font from Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <!-- Importing 'Cinzel' font from Google Fonts --><link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
     <style>
@@ -70,6 +69,7 @@
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
+            transition: opacity 0.8s ease-in-out; /* ADDED: Transition for the overlay itself */
         }
         
         #poem-title-numeral {
@@ -152,8 +152,7 @@
 </head>
 <body>
 
-    <!-- Main container for the poem lines -->
-    <div id="poem-container">
+    <!-- Main container for the poem lines --><div id="poem-container">
         <div id="stanza-container">
             <div class="poem-line"></div>
             <div class="poem-line"></div>
@@ -162,11 +161,9 @@
         </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div id="loading">Loading Poems...</div>
+    <!-- Loading Overlay --><div id="loading">Loading Poems...</div>
 
-    <!-- Poem Title Overlay -->
-    <div id="poem-title-overlay">
+    <!-- Poem Title Overlay --><div id="poem-title-overlay">
         <h1 id="poem-title-numeral"></h1>
     </div>
 
@@ -223,12 +220,10 @@
          */
         async function loadAndParsePoems() {
             try {
-                // --- MODIFIED AS REQUESTED ---
                 // Pointing to the GitHub Pages URL, just like your working "Death & Romance" project.
                 // This is the correct "same-origin" URL.
                 const poemsUrl = 'https://MTvrimPossible.github.io/dickinson/dickinson.txt';
                 console.log(`Attempting to fetch poems from: ${poemsUrl}`);
-                // -----------------------------
 
                 const response = await fetch(poemsUrl);
                 if (!response.ok) {
@@ -236,45 +231,29 @@
                 }
                 const text = await response.text();
 
-                // --- ADDED FOR DEBUGGING ---
                 // This will show us the exact text content in the console
                 // *before* we try to parse it.
                 console.log("--- RAW TEXT FILE CONTENT ---");
                 console.log(text);
                 console.log("--- END RAW TEXT ---");
-                // --- END DEBUGGING ---
-
 
                 // --- NEW PARSING LOGIC ---
 
-                // 1. Pre-pend newlines to the text.
-                // This makes the *first* poem match the same pattern as all other poems,
-                // simplifying the split logic.
-                // --- MODIFIED --- Normalize all line endings (Windows/Mac/Unix) to just \n
+                // Normalize all line endings (Windows/Mac/Unix) to just \n
                 const normalizedText = "\n\n" + text.replace(/\r\n/g, '\n');
 
-                // 2. Split the file by the Roman numeral headers.
-                // --- MODIFIED --- Made the regex more robust to handle different line endings.
+                // Split the file by the Roman numeral headers.
                 // It now looks for (2 newlines)(Roman numeral)(.)(2 newlines)
                 const parts = normalizedText.split(/\n\n([IVXLCDM]+)\.\n\n/);
-
-                // 3. Process the parts into the poem structure
-                // The split results in:
-                // parts[0] = "" (the text before the first match)
-                // parts[1] = "XX" (the numeral)
-                // parts[2] = "Bless God... fight." (the poem text)
-                // parts[3] = "XXI" (the numeral)
-                // parts[4] = "Immortal is... below." (the poem text)
-                // ...
                 
-                // We start at index 1 and increment by 2
+                // Process the parts into the poem structure
                 for (let i = 1; i < parts.length; i += 2) {
                     const title = parts[i];       // This is the Roman numeral, e.g., "XX"
                     const poemText = parts[i + 1];  // This is the poem text
 
                     if (!poemText) continue;
 
-                    // 4. Process the poem text into lines and stanzas
+                    // Process the poem text into lines and stanzas
                     const lines = poemText.split('\n')
                         .map(line => line.trim()) // Trim whitespace from each line
                         .filter(line => line.length > 0); // Remove empty lines
@@ -300,9 +279,7 @@
                 console.log(`Successfully loaded and parsed ${allPoems.length} poems.`);
                 
             } catch (error) {
-                // --- MODIFIED FOR BETTER DEBUGGING ---
                 console.error("Failed to load or parse poems:", error.message, error);
-                // Display error to the user
                 loadingOverlay.textContent = "Error loading poems. Please try again.";
             }
         }
@@ -333,32 +310,30 @@
          * @param {string} titleString - The title from the poem object (which is just the numeral)
          */
         async function displayPoemTitle(titleString) {
-            // The title *is* the numeral. No conversion needed.
-            
-            // 1. Set text
+            // Set text
             titleNumeral.textContent = titleString; 
             
-            // 2. Hide poem, show overlay
+            // Show overlay with fade-in
             body.classList.add('showing-title');
             titleOverlay.style.pointerEvents = 'auto';
-            titleOverlay.style.opacity = 1;
+            titleOverlay.style.opacity = 1; // This triggers the CSS transition for opacity
 
-            // 3. Animate title
+            // Animate title numeral (scale and fade-in)
             await wait(100); // Short delay for CSS
             titleNumeral.style.opacity = 1;
             titleNumeral.style.transform = 'scale(1)';
 
-            // 4. Hold
+            // Hold
             await wait(TIME_TITLE_VISIBLE);
 
-            // 5. Fade out all
-            titleOverlay.style.opacity = 0;
-            titleNumeral.style.opacity = 0;
-            titleNumeral.style.transform = 'scale(0.9)';
+            // Fade out the entire overlay
+            titleOverlay.style.opacity = 0; // This triggers the CSS transition for overlay opacity
+            titleNumeral.style.opacity = 0; // Fade out numeral as well
+            titleNumeral.style.transform = 'scale(0.9)'; // Scale numeral back down
             
-            await wait(TIME_TITLE_FADE_OUT);
+            await wait(TIME_TITLE_FADE_OUT); // Wait for the fade-out transition to complete
             
-            // 6. Hide overlay, show poem
+            // Hide overlay, show poem
             body.classList.remove('showing-title');
             titleOverlay.style.pointerEvents = 'none';
         }
