@@ -380,10 +380,11 @@
                 const defaultFontSize = parseFloat(window.getComputedStyle(el).fontSize);
 
                 // 4. Check for overflow
-                // We use a 99% threshold to be safe from rounding errors
-                if (el.scrollWidth > (el.clientWidth * 0.99)) {
+                // MODIFIED: Check against the PARENT container's width, which is more stable
+                if (el.scrollWidth > (stanzaContainer.clientWidth * 0.99)) {
                     // 5. Calculate and apply new font size
-                    const ratio = el.clientWidth / el.scrollWidth;
+                    // MODIFIED: Use the PARENT container's width for the ratio
+                    const ratio = stanzaContainer.clientWidth / el.scrollWidth;
                     // Apply ratio, but don't go below 12px
                     const newFontSize = Math.max(Math.floor(defaultFontSize * ratio), 12); 
                     el.style.fontSize = `${newFontSize}px`;
