@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dickinson Poems</title>
+    <!-- Importing 'Cinzel' font from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Cinzel', serif;
+            /* Color variables will be set by JavaScript */
+            background-color: var(--bg-color, #111);
+            color: var(--font-color, #eee);
+            transition: background-color 0.5s linear, color 0.5s linear;
+        }
+
+        #poem-container {
+            display: grid;
+            place-items: center;
+            height: 100%;
+            text-align: center;
+            padding: 2rem;
+            box-sizing: border-box;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #stanza-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 900px; /* Max width for longer lines */
+        }
+
+        .poem-line {
+            font-size: 1.75rem;
+            line-height: 1.6;
+            min-height: 1.6em; /* Prevents layout jump */
+            opacity: 0;
+            transition: opacity 1.2s ease-in-out;
+            
+            /* Keep nowrap, remove overflow/ellipsis */
+            white-space: nowrap;
+        }
+
+        /* Style for the em-dash */
+        .poem-line .em-dash {
+            font-family: 'Times New Roman', Times, serif;
+            font-weight: bold;
+        }
+
+        /* Title Overlay for Roman Numeral */
+        #poem-title-overlay {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            /* Use same color vars */
+            background-color: var(--bg-color, #111);
+            color: var(--font-color, #eee);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none; /* Allows clicks through when hidden */
+        }
+        
+        #poem-title-numeral {
+            font-size: 5rem;
+            font-weight: 700;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+
+        /* NEW: Loading Indicator */
+        #loading {
+            font-size: 2rem;
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background-color: #000;
+            color: #fff;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+            font-family: 'Cinzel', serif;
+        }
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Hide the poem container when the title is showing */
+        body.showing-title #poem-container {
+            opacity: 0;
+        }
+
+        /* --- PHASES FOR EFFECTS --- */
+
+        /* Phase 3: Lenticular/Shiny Text 
+           This class is added after 15 minutes.
+        */
+        body.phase-3 .poem-line {
+            background-image: linear-gradient(
+                -45deg,
+                #ff0000, #ff7300, #fffb00, #48ff00,
+                #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
+            );
+            background-size: 200% auto;
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            animation: shine 3s linear infinite;
+        }
+
+        @keyframes shine {
+            to {
+                background-position: -200% center;
+            }
+        }
+
+        /* Phase 4 Keyframes */
+        @keyframes flicker-bright {
+            0%, 100% { filter: brightness(1); }
+            20% { filter: brightness(1); }
+            22% { filter: brightness(0.4); }
+            25% { filter: brightness(1); }
+            50% { filter: brightness(1); }
+            52% { filter: brightness(0.5); }
+            56% { filter: brightness(1); }
+        }
+
+        /* Phase 4: Text Flicker
+           This class is added after 20 minutes.
+           It OVERRIDES the phase-3 animation rule to STACK animations.
+        */
+        body.phase-4 .poem-line {
+            /* We must re-declare 'shine' and add 'flicker-bright' */
+            animation: shine 3s linear infinite, flicker-bright 0.8s linear infinite;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Main container for the poem lines -->
+    <div id="poem-container">
+        <div id="stanza-container">
+            <div class="poem-line"></div>
+            <div class="poem-line"></div>
+            <div class="poem-line"></div>
+            <div class="poem-line"></div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading">Loading Poems...</div>
+
+    <!-- Poem Title Overlay -->
+    <div id="poem-title-overlay">
+        <h1 id="poem-title-numeral"></h1>
+    </div>
+
+    <script>
+        // --- POEM DATA ---
+        // This will be filled by fetching poems.txt
+        let allPoems = [];
+
+        // --- DOM REFERENCES ---
+        const stanzaContainer = document.getElementById("stanza-container");
+        const lineElements = [
+            stanzaContainer.children[0],
+            stanzaContainer.children[1],
+            stanzaContainer.children[2],
+            stanzaContainer.children[3]
+        ];
+        const body = document.body;
+        const titleOverlay = document.getElementById('poem-title-overlay');
+        const titleNumeral = document.getElementById('poem-title-numeral');
+        const loadingOverlay = document.getElementById('loading'); // NEW
+
+        // --- STATE VARIABLES ---
+        let currentPoem = null;
+        let currentStanzaIndex = 0;
+        let isFlashing = false;
+        let isPhase3 = false;
+        let flashInterval = 1000;
+        let lastFlashTime = 0;
+        let flashAccelerationStartTime = 0;
+
+        // --- TIMING CONSTANTS ---
+        const LINE_FADE_IN = 1200;
+        const LINE_FADE_OUT = 1200;
+        const LINE_VISIBLE = 2500;
+        const STANZA_DELAY = 1000;
+        const POEM_DELAY = 2000;
+
+        const PHASE_2_START_TIME = 5 * 60 * 1000;  // 5 minutes
+        const PHASE_3_START_TIME = 15 * 60 * 1000; // 15 minutes
+        const FLASH_ACCELERATION_DURATION = 10 * 60 * 1000; // 10 minutes
+        const FLASH_INTERVAL_START = 1000; // 1 flash per second
+        const FLASH_INTERVAL_END = 100;    // 10 flashes per second (CAPPED for safety)
+        const PHASE_4_START_TIME = 20 * 60 * 1000; // 20 minutes
+
+        // Title Flash Timing
+        const TIME_TITLE_FADE_IN = 500;
+        const TIME_TITLE_VISIBLE = 2000;
+        const TIME_TITLE_FADE_OUT = 800;
+
+        // --- POEM DISPLAY LOGIC ---
+
+        /**
+         * Fetches and parses the poems.txt file.
+         */
+        async function loadAndParsePoems() {
+            try {
+                const response = await fetch('poems.txt');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const text = await response.text();
+
+                // 1. Split the file by the Roman numeral headers.
+                // This regex looks for: (Newline)(one or more Roman chars)(Period)(Newline)
+                // The capture group `()` keeps the delimiter (the numeral) in the resulting array.
+                const parts = text.split(/\n([IVXLCDM]+)\.\n/);
+
+                // 2. Process the parts into the poem structure
+                // The split results in: ["", "I", "Poem 1 text...", "II", "Poem 2 text...", ...]
+                for (let i = 1; i < parts.length; i += 2) {
+                    const title = parts[i].trim(); // This is the Roman numeral, e.g., "I"
+                    const poemText = parts[i + 1];
+
+                    if (!poemText) continue;
+
+                    // 3. Process the poem text into lines and stanzas
+                    const lines = poemText.split('\n')
+                        .map(line => line.trim()) // Trim whitespace from each line
+                        .filter(line => line.length > 0); // Remove empty lines
+
+                    const stanzas = [];
+                    for (let j = 0; j < lines.length; j += 4) {
+                        // Slice 4 lines for the stanza.
+                        stanzas.push(lines.slice(j, j + 4));
+                    }
+
+                    if (stanzas.length > 0) {
+                        allPoems.push({
+                            title: title, // e.g., "I" or "XXI"
+                            stanzas: stanzas
+                        });
+                    }
+                }
+                
+                if (allPoems.length === 0) {
+                    throw new Error("No poems were successfully parsed.");
+                }
+                
+                console.log(`Successfully loaded and parsed ${allPoems.length} poems.`);
+                
+            } catch (error) {
+                console.error("Failed to load or parse poems:", error);
+                // Display error to the user
+                loadingOverlay.textContent = "Error loading poems. Please try again.";
+            }
+        }
+
+
+        /**
+         * Starts the poem display sequence.
+         * Picks a new random poem and starts from the first stanza.
+         */
+        async function startNewPoem() {
+            // Pick a random poem that isn't the same as the last one
+            let newPoem;
+            do {
+                newPoem = allPoems[Math.floor(Math.random() * allPoems.length)];
+            } while (newPoem === currentPoem && allPoems.length > 1);
+            
+            currentPoem = newPoem;
+            currentStanzaIndex = 0;
+            
+            // Wait for the title to display *before* showing the stanza
+            await displayPoemTitle(currentPoem.title);
+            
+            showStanza(currentStanzaIndex);
+        }
+
+        /**
+         * Displays the poem title/number overlay
+         * @param {string} titleString - The title from the poem object (which is just the numeral)
+         */
+        async function displayPoemTitle(titleString) {
+            // The title *is* the numeral. No conversion needed.
+            
+            // 1. Set text
+            titleNumeral.textContent = titleString; 
+            
+            // 2. Hide poem, show overlay
+            body.classList.add('showing-title');
+            titleOverlay.style.pointerEvents = 'auto';
+            titleOverlay.style.opacity = 1;
+
+            // 3. Animate title
+            await wait(100); // Short delay for CSS
+            titleNumeral.style.opacity = 1;
+            titleNumeral.style.transform = 'scale(1)';
+
+            // 4. Hold
+            await wait(TIME_TITLE_VISIBLE);
+
+            // 5. Fade out all
+            titleOverlay.style.opacity = 0;
+            titleNumeral.style.opacity = 0;
+            titleNumeral.style.transform = 'scale(0.9)';
+            
+            await wait(TIME_TITLE_FADE_OUT);
+            
+            // 6. Hide overlay, show poem
+            body.classList.remove('showing-title');
+            titleOverlay.style.pointerEvents = 'none';
+        }
+
+        /**
+         * Displays a single stanza, line by line.
+         */
+        async function showStanza(stanzaIndex) {
+            const stanza = currentPoem.stanzas[stanzaIndex];
+            
+            for (let i = 0; i < 4; i++) {
+                const line = stanza[i] || ""; // Get line or empty string
+                const el = lineElements[i];
+                
+                // --- Font shrinking logic ---
+                
+                // 1. Reset font size from previous line
+                el.style.fontSize = ''; 
+                
+                // 2. Set new line content
+                const processedLine = line.replace(/\s*-\s*/g, '<span class="em-dash">—</span>');
+                el.innerHTML = processedLine; // Use innerHTML to render the span
+
+                // 3. Get default font size (as pixels)
+                const defaultFontSize = parseFloat(window.getComputedStyle(el).fontSize);
+
+                // 4. Check for overflow
+                // We use a 99% threshold to be safe from rounding errors
+                if (el.scrollWidth > (el.clientWidth * 0.99)) {
+                    // 5. Calculate and apply new font size
+                    const ratio = el.clientWidth / el.scrollWidth;
+                    // Apply ratio, but don't go below 12px
+                    const newFontSize = Math.max(Math.floor(defaultFontSize * ratio), 12); 
+                    el.style.fontSize = `${newFontSize}px`;
+                }
+                // --- End of new logic ---
+                
+                // Fade In
+                el.style.opacity = 1;
+                await wait(LINE_VISIBLE);
+                
+                // Fade Out
+                el.style.opacity = 0;
+                await wait(LINE_FADE_OUT);
+            }
+
+            // After all lines are done, check for next stanza or poem
+            await wait(STANZA_DELAY);
+
+            if (currentStanzaIndex < currentPoem.stanzas.length - 1) {
+                // Go to next stanza
+                currentStanzaIndex++;
+                showStanza(currentStanzaIndex);
+            } else {
+                // End of poem, start a new one
+                await wait(POEM_DELAY);
+                startNewPoem();
+            }
+        }
+        
+        // Helper function for delays
+        function wait(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // --- COLOR & EFFECT LOGIC ---
+
+        // Config
+        let hue = 200; // Starting hue
+        const morphSpeed = 0.01; // Speed of hue change
+        const flashHueJump = 180; // Opposite color
+
+        function colorLoop(timestamp) {
+            // --- Phase 1: Slow Color Morph ---
+            hue = (hue + morphSpeed) % 360;
+            
+            let currentBgHue = hue;
+            let currentFontHue = (hue + 180) % 360;
+            let currentBgLightness = 10;
+            let currentFontLightness = 90;
+
+            // --- Phase 2: Flashing ---
+            if (isFlashing) {
+                if (timestamp - lastFlashTime > flashInterval) {
+                    // Invert colors
+                    currentBgHue = (hue + flashHueJump) % 360;
+                    currentFontHue = hue % 360;
+                    
+                    // Alternate between light/dark
+                    if (Math.random() > 0.5) {
+                        currentBgLightness = 90;
+                        currentFontLightness = 10;
+                    } else {
+                        currentBgLightness = 10;
+                        currentFontLightness = 90;
+                    }
+                    
+                    lastFlashTime = timestamp;
+                }
+            }
+            
+            // Always ensure high contrast
+            let bgLight = currentBgLightness;
+            let fontLight = currentFontLightness;
+            if (isFlashing) {
+                // During flash, just use the calculated values
+            } else {
+                // During morph, slowly oscillate lightness
+                const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
+                bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
+                fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
+            }
+
+
+            // Apply colors
+            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, 80%, ${bgLight}%)`);
+            body.style.setProperty('--font-color', `hsl(${currentFontHue}, 80%, ${fontLight}%)`);
+
+            requestAnimationFrame(colorLoop);
+        }
+
+        function accelerateFlashing() {
+            flashAccelerationStartTime = Date.now();
+            
+            function updateFlashInterval() {
+                const elapsedTime = Date.now() - flashAccelerationStartTime;
+                const progress = Math.min(elapsedTime / FLASH_ACCELERATION_DURATION, 1);
+                
+                // Linear interpolation from START interval to END interval
+                flashInterval = FLASH_INTERVAL_START + (FLASH_INTERVAL_END - FLASH_INTERVAL_START) * progress;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateFlashInterval);
+                } else {
+                    flashInterval = FLASH_INTERVAL_END; // Lock at max speed
+                    console.log("--- Flashing at MAX speed ---");
+                }
+            }
+            updateFlashInterval();
+        }
+
+        // --- START EVERYTHING ---
+        
+        /**
+         * Main initialization function
+         */
+        async function main() {
+            // 1. Start the visual color loop immediately
+            requestAnimationFrame(colorLoop);
+
+            // 2. Load and parse the poems
+            await loadAndParsePoems();
+            
+            // 3. If poems loaded, hide loading screen and start
+            if (allPoems.length > 0) {
+                loadingOverlay.classList.add('hidden');
+                
+                // Start timers for phases
+                setTimeout(() => {
+                    console.log("--- PHASE 2: Flashing Started ---");
+                    isFlashing = true;
+                    accelerateFlashing();
+                }, PHASE_2_START_TIME);
+
+                setTimeout(() => {
+                    console.log("--- PHASE 3: Shiny Text Started ---");
+                    isPhase3 = true;
+                    body.classList.add('phase-3');
+                }, PHASE_3_START_TIME);
+
+                // Timer for Phase 4
+                setTimeout(() => {
+                    console.log("--- PHASE 4: Text Flicker Started ---");
+                    body.classList.add('phase-4');
+                }, PHASE_4_START_TIME);
+
+                // Start the poem display
+                startNewPoem();
+            }
+            // If poems didn't load, the error message will remain visible.
+        }
+        
+        // Run the main function
+        main();
+
+    </script>
+</body>
+</html>
