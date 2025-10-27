@@ -148,6 +148,25 @@
             animation: shine 3s linear infinite, flicker-bright 0.8s linear infinite;
         }
 
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 768px) {
+            #poem-container {
+                padding: 1rem; /* Tighter padding for small screens */
+            }
+
+            .poem-line {
+                font-size: 1.5rem; /* Smaller base font for mobile */
+            }
+
+            #poem-title-numeral {
+                font-size: 3.5rem; /* Smaller title font for mobile */
+            }
+
+            #loading {
+                font-size: 1.5rem; /* Smaller loading font */
+            }
+        }
+
     </style>
 </head>
 <body>
