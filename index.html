@@ -448,8 +448,17 @@
             if (lastTimestamp === 0) {
                 lastTimestamp = timestamp;
             }
-            const deltaTime = (timestamp - lastTimestamp) / 1000; // time in seconds
+            let deltaTime = (timestamp - lastTimestamp) / 1000; // time in seconds
             lastTimestamp = timestamp;
+
+            // *** NEW FIX ***
+            // Cap delta time to prevent huge jumps on stutter or tab resume
+            // 0.1s = 10fps. Anything slower will just slow the morph, not jump it.
+            // This is the key to fixing the "clicking" on mobile.
+            if (deltaTime > 0.1) {
+                deltaTime = 0.1; 
+            }
+            // *** END NEW FIX ***
 
             // --- 2. Calculate Per-Frame Hue (Smooth Morph) ---
             // morphSpeed is now degrees/sec * seconds_elapsed
