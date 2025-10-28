@@ -21,7 +21,7 @@
             --bg-color: hsl(200, 30%, 10%);
             --font-color: hsl(20, 80%, 90%);
             
-            /* FIX: CSS transition is BACK. This ensures the smooth "blend". */
+            /* CSS transition ensures the smooth "blend". */
             /* The duration will be controlled by JavaScript. */
             transition: background-color 1.0s linear, color 1.0s linear;
             
@@ -77,7 +77,7 @@
             background-color: var(--bg-color);
             color: var(--font-color);
             
-            /* FIX: CSS transition is BACK. */
+            /* CSS transition ensures the smooth "blend". */
             transition: background-color 1.0s linear, color 1.0s linear, opacity 1.2s ease-in-out;
             
             z-index: 100;
@@ -157,6 +157,24 @@
             animation: shine 8s linear infinite, 
                        flicker-bright 0.2s linear infinite;
         }
+        
+        /* FIX: Disable polychrome and flicker on mobile */
+        @media (max-width: 768px) {
+            body.phase-3 .poem-line {
+                /* Revert all polychrome effects */
+                background-image: none;
+                -webkit-background-clip: initial;
+                background-clip: initial;
+                color: var(--font-color); /* Use the readable JS color */
+                text-shadow: none;
+                animation: none;
+            }
+        
+            body.phase-4 .poem-line {
+                /* Revert flicker effects (already covered by above) */
+                animation: none;
+            }
+        }
 
     </style>
 </head>
@@ -190,6 +208,8 @@
         let isFlashingActive = false;
         let isPhase3 = false;
         let flashAccelerationStartTime = 0;
+        let colorLoopTimerId = null; // To hold the timer
+        let accelerationTimerId = null; // To hold the acceleration timer
         
         // --- TIMING CONSTANTS ---
         const LINE_FADE_IN = 1200;
@@ -351,11 +371,6 @@
         let fontLight = 90;
         let bgSat = 30;
         let fontSat = 80;
-        let lightnessTimestamp = 0;
-        
-        // FIX: Re-architected animation.
-        // This is no longer a 60fps loop.
-        // This is a "stepped" loop that relies on CSS transitions.
         
         // Start: 1 update per second (1000ms)
         const LOOP_SPEED_START = 1000;
@@ -365,7 +380,6 @@
         const LOOP_SPEED_END = 50;
         const TRANSITION_SPEED_END = 0.05;
         
-        // This variable will be accelerated
         let currentLoopSpeed = LOOP_SPEED_START;
         let currentTransitionSpeed = TRANSITION_SPEED_START;
 
@@ -390,14 +404,19 @@
             body.style.setProperty('--font-color', `hsl(${(hue + 180) % 360}, ${fontSat}%, ${fontLight}%)`);
             
             // Loop at the current speed
-            setTimeout(colorLoop, currentLoopSpeed);
+            // Clear the old timer and set a new one
+            if (colorLoopTimerId) clearTimeout(colorLoopTimerId);
+            colorLoopTimerId = setTimeout(colorLoop, currentLoopSpeed);
         }
 
         // FIX: This function now accelerates the MORPH SPEED
         function accelerateFlashing() {
             flashAccelerationStartTime = Date.now();
             
-            function updateFlashSpeed() {
+            // FIX: Use a stable setInterval, not requestAnimationFrame
+            // This runs 10x per second (every 100ms)
+            if (accelerationTimerId) clearInterval(accelerationTimerId);
+            accelerationTimerId = setInterval(() => {
                 const elapsedTime = Date.now() - flashAccelerationStartTime;
                 const progress = Math.min(elapsedTime / FLASH_ACCELERATION_DURATION, 1);
                 
@@ -409,27 +428,19 @@
                                 (TRANSITION_SPEED_END - TRANSITION_SPEED_START) * progress;
 
                 // Apply the new transition speed to the CSS
-                // FIX: Use currentTransitionSpeed and higher precision
-                // This stops the rounding error that de-synced the animation.
                 const speedInSeconds = currentTransitionSpeed.toFixed(3);
                 const transitionString = `background-color ${speedInSeconds}s linear, color ${speedInSeconds}s linear`;
                 
                 body.style.transition = transitionString;
-                // Apply to overlay as well, but keep opacity transition
                 titleOverlay.style.transition = `${transitionString}, opacity 1.2s ease-in-out`;
                 
                 
-                if (progress < 1) {
-                    // Use requestAnimationFrame for the *acceleration* part
-                    // to keep this calculation smooth.
-                    requestAnimationFrame(updateFlashSpeed);
-                } else {
+                if (progress >= 1) {
                     currentLoopSpeed = LOOP_SPEED_END; // Lock at max speed
+                    clearInterval(accelerationTimerId); // Stop this loop
                     console.log("--- Flashing at MAX speed ---");
                 }
-            }
-            // Start the acceleration loop
-            updateFlashSpeed();
+            }, 100); // Update 10x per second
         }
 
         // --- START EVERYTHING ---
