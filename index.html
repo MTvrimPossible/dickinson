@@ -210,7 +210,7 @@
     <div id="poem-container">
         <div id="stanza-container">
             <div class="poem-line"></div>
-            <div class.poem-line"></div>
+            <div class="poem-line"></div>
             <div class="poem-line"></div>
             <div class="poem-line"></div>
         </div>
@@ -547,7 +547,7 @@
                   The browser will now smoothly animate from the
                   flash color *back* to the morph color.
                 */
-                body.style.setProperty('--bg-color', `hsl(${hue}, ${bgSat}%, ${bgLight}%)`);
+                body.style.setProperty('--bg-g-color', `hsl(${hue}, ${bgSat}%, ${bgLight}%)`);
                 body.style.setProperty('--font-color', `hsl(${(hue + 180) % 360}, ${fontSat}%, ${fontLight}%)`);
                 
                 isCurrentlyFlashing = false;
