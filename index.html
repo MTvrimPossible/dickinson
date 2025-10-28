@@ -11,19 +11,59 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
     
     <style>
+        /* FIX: Register --base-hue so the browser can animate it smoothly.
+          This is the key to the smooth morph.
+        */
+        @property --base-hue {
+            syntax: '<number>';
+            inherits: false;
+            initial-value: 200;
+        }
+
+        /* FIX: Keyframes to animate the hue from 0 to 360 */
+        @keyframes morph-hue {
+            from { --base-hue: 0; }
+            to { --base-hue: 360; }
+        }
+
         body, html {
             height: 100%;
             margin: 0;
             padding: 0;
             overflow: hidden; /* This is critical. No scrolling. */
             font-family: 'Cinzel', serif;
-            /* Color variables will be set by JavaScript */
-            background-color: var(--bg-color, #111);
-            color: var(--font-color, #eee);
-            /* FIX: REMOVED ALL CSS color transitions. 
-              JavaScript's requestAnimationFrame will handle all color changes 
-              for a smooth morph AND an instant flash.
+            
+            /* These are the CSS variables that control the colors.
+              --base-hue will be animated by CSS (see 'animation' rule below).
+              --bg-lightness and --font-lightness will be set by JS for a slow pulse.
             */
+            --base-hue: 200; /* Starting hue */
+            --bg-sat: 20%;
+            --font-sat: 80%;
+            --bg-lightness: 10%;
+            --font-lightness: 90%;
+            
+            /* --base-hue is animated by CSS.
+              --bg-hue-override and --font-hue-override are set by JS during flash.
+               
+              We use 'var(JS_OVERRIDE, CSS_ANIMATION_VALUE)'
+              This means "Use the JS override if it exists, otherwise use the CSS animation value."
+            */
+            
+            /* 1. Set the final BG hue. Use override if it exists, else use base CSS animation. */
+            --bg-hue-final: var(--bg-hue-override, var(--base-hue));
+            
+            /* 2. Set the final FONT hue. Use override if it exists, else use base CSS animation + 180. */
+            --font-hue-final: var(--font-hue-override, calc(var(--base-hue) + 180));
+            
+            /* 3. Apply the final colors */
+            background-color: hsl(var(--bg-hue-final), var(--bg-sat), var(--bg-lightness));
+            color: hsl(var(--font-hue-final), var(--font-sat), var(--font-lightness));
+            
+            /* FIX: CSS animation handles the smooth morph.
+              This will be smooth on ALL browsers. 300s = 5 minute loop.
+            */
+            animation: morph-hue 300s linear infinite;
         }
 
         #poem-container {
@@ -76,15 +116,16 @@
             inset: 0;
             display: grid;
             place-items: center;
-            /* Use same color vars */
-            background-color: var(--bg-color, #111);
-            color: var(--font-color, #eee);
+            /* FIX: Use the same final CSS variables.
+               This makes the title overlay morph and flash 
+               in sync with the body.
+            */
+            background-color: hsl(var(--bg-hue-final), var(--bg-sat), var(--bg-lightness));
+            color: hsl(var(--font-hue-final), var(--font-sat), var(--font-lightness));
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
-            /* FIX: REMOVED CSS color transitions.
-              The opacity transition remains.
-            */
+            /* Opacity transition remains. */
             transition: opacity 1.2s ease-in-out;
         }
         
@@ -433,83 +474,72 @@
         }
 
         // --- COLOR & EFFECT LOGIC ---
-
-        let hue = 200; // Starting hue
-        // FIX: Switched to delta-time animation.
-        // This is degrees per second. 360 / 300s = 1.2 deg/sec (5 min loop)
-        const morphDegreesPerSecond = 1.2; 
-        let lastTimestamp = 0; // For delta time calculation
         
-        const flashHueJump = 180; 
+        /*
+          FIX: The logic has been split.
+          1. The smooth HUE morph is handled 100% by CSS animation.
+          2. 'lightnessLoop' handles the slow lightness oscillation.
+          3. 'flashLoop' handles the *instant* flash by overriding CSS.
+        */
 
-        // *** NEW, CORRECTED colorLoop LOGIC (No CSS transitions) ***
-        function colorLoop(timestamp) {
-            // --- 1. Calculate Delta Time ---
-            if (lastTimestamp === 0) {
-                lastTimestamp = timestamp;
-            }
-            let deltaTime = (timestamp - lastTimestamp) / 1000; // time in seconds
-            lastTimestamp = timestamp;
-
-            // *** NEW FIX ***
-            // Cap delta time to prevent huge jumps on stutter or tab resume
-            // 0.1s = 10fps. Anything slower will just slow the morph, not jump it.
-            // This is the key to fixing the "clicking" on mobile.
-            if (deltaTime > 0.1) {
-                deltaTime = 0.1; 
-            }
-            // *** END NEW FIX ***
-
-            // --- 2. Calculate Per-Frame Hue (Smooth Morph) ---
-            // morphSpeed is now degrees/sec * seconds_elapsed
-            const morphAmount = morphDegreesPerSecond * deltaTime;
-            hue = (hue + morphAmount) % 360; 
-
-            // --- 3. Calculate Lightness ---
+        // This loop only handles the slow, smooth lightness oscillation.
+        function lightnessLoop(timestamp) {
+             // --- Calculate Lightness ---
             const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
 
-            // --- 4. Set Default State (Dark BG, Light Font) ---
+            // --- Set Default State (Dark BG, Light Font) ---
             let bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
             let fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
-            let currentBgHue = hue;
-            let currentFontHue = (hue + 180) % 360;
-            let bgSat = 20; // Low saturation BG
-            let fontSat = 80; // High saturation Font
 
-            // --- 5. Check for Phase 2: Flashing ---
+            body.style.setProperty('--bg-lightness', `${bgLight}%`);
+            body.style.setProperty('--font-lightness', `${fontLight}%`);
+
+            requestAnimationFrame(lightnessLoop);
+        }
+
+        // This loop ONLY handles the "flash" logic.
+        // The smooth morph is handled 100% by CSS.
+        function flashLoop(timestamp) {
+            // We only need to run this logic if we are in Phase 2+
             if (isFlashing) {
                 const now = timestamp;
 
                 // Check if we are CURRENTLY in a flash state
                 if (isCurrentlyFlashing) {
                     // --- FLASH STATE ---
-                    // Swap the HUES only
-                    currentBgHue = (hue + flashHueJump) % 360; 
-                    currentFontHue = hue; 
-                    
-                    // Check if the flash duration has ended
+                    // The flash is active. Check if its duration has ended.
                     if (now - lastFlashTime > FLASH_DURATION) {
                         isCurrentlyFlashing = false;
-                        lastFlashTime = now; // Reset timer for the *next* interval
+                        // REMOVE the JS override, letting CSS animation take over.
+                        body.style.setProperty('--bg-hue-override', null);
+                        body.style.setProperty('--font-hue-override', null);
                     }
                 } else {
                     // --- MORPH STATE ---
-                    // (Default state is already set)
+                    // (CSS is handling this)
                     // Check if it's time to START a new flash
                     if (now - lastFlashTime > flashInterval) {
                         isCurrentlyFlashing = true;
                         lastFlashTime = now; // Mark the start of the flash
+
+                        // GET the current hue from the CSS animation
+                        // We read '--base-hue' which is animated from 0-360
+                        const currentHue = parseFloat(getComputedStyle(body).getPropertyValue('--base-hue'));
+
+                        // Set the JS override properties
+                        const flashBgHue = (currentHue + flashHueJump) % 360;
+                        const flashFontHue = currentHue;
+
+                        body.style.setProperty('--bg-hue-override', `${flashBgHue}`);
+                        body.style.setProperty('--font-hue-override', `${flashFontHue}`);
                     }
                 }
             }
             
-            // --- 6. Apply Colors ---
-            // This happens every frame, for a smooth morph and instant flash
-            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, ${bgSat}%, ${bgLight}%)`);
-            body.style.setProperty('--font-color', `hsl(${currentFontHue}, ${fontSat}%, ${fontLight}%)`);
-
-            requestAnimationFrame(colorLoop);
+            // Keep the loop running
+            requestAnimationFrame(flashLoop);
         }
+
 
         function accelerateFlashing() {
             flashAccelerationStartTime = Date.now();
@@ -534,7 +564,10 @@
         // --- START EVERYTHING ---
         
         async function main() {
-            requestAnimationFrame(colorLoop);
+            // Start the two animation loops
+            requestAnimationFrame(lightnessLoop);
+            requestAnimationFrame(flashLoop);
+
             await loadAndParsePoems();
             
             if (allPoems.length > 0) {
@@ -569,3 +602,4 @@
     </script>
 </body>
 </html>
+
