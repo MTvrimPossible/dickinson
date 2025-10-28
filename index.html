@@ -426,6 +426,10 @@
                     // No min font size; shrink as small as needed.
                     const newFontSize = Math.floor(defaultFontSize * ratio); 
                     el.style.fontSize = `${newFontSize}px`;
+                    
+                    // FIX: Force the browser to "reflow" and apply the
+                    // new font size *before* the next check.
+                    const _ = el.offsetWidth;
                 }
 
                 // 6. Check *again* after shrinking. If still overflowing, wrap.
@@ -547,7 +551,7 @@
                   The browser will now smoothly animate from the
                   flash color *back* to the morph color.
                 */
-                body.style.setProperty('--bg-g-color', `hsl(${hue}, ${bgSat}%, ${bgLight}%)`);
+                body.style.setProperty('--bg-color', `hsl(${hue}, ${bgSat}%, ${bgLight}%)`);
                 body.style.setProperty('--font-color', `hsl(${(hue + 180) % 360}, ${fontSat}%, ${fontLight}%)`);
                 
                 isCurrentlyFlashing = false;
