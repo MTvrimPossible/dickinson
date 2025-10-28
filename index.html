@@ -409,7 +409,9 @@
                                 (TRANSITION_SPEED_END - TRANSITION_SPEED_START) * progress;
 
                 // Apply the new transition speed to the CSS
-                const speedInSeconds = (currentLoopSpeed / 1000).toFixed(2);
+                // FIX: Use currentTransitionSpeed and higher precision
+                // This stops the rounding error that de-synced the animation.
+                const speedInSeconds = currentTransitionSpeed.toFixed(3);
                 const transitionString = `background-color ${speedInSeconds}s linear, color ${speedInSeconds}s linear`;
                 
                 body.style.transition = transitionString;
