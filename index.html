@@ -432,18 +432,30 @@
 
         // --- COLOR & EFFECT LOGIC ---
 
-        let hue = 200; 
-        const morphSpeed = 0.01; 
+        let hue = 200; // Starting hue
         const flashHueJump = 180; 
 
-        // *** RESTORED AND CORRECTED colorLoop FUNCTION ***
+        // *** FIX: REFACTORED colorLoop to be TIME-BASED ***
+        // This fixes the morphing "not working" on mobile, as it's
+        // no longer dependent on a fixed 60fps frame rate.
+
+        let morphStartTime = 0; // Will be set on first frame
+        // 600 * 1000ms = 600 seconds = 10 minutes for a full 360-degree loop
+        const morphLoopDuration = 600 * 1000; 
+
         function colorLoop(timestamp) {
-            hue = (hue + morphSpeed) % 360;
-            
+            // --- 1. Calculate Time-Based Hue ---
+            if (morphStartTime === 0) {
+                morphStartTime = timestamp;
+            }
+            const morphElapsed = timestamp - morphStartTime;
+            const morphProgress = (morphElapsed / morphLoopDuration) % 1.0;
+            hue = morphProgress * 360; // Current hue (0-360)
+
+            // --- 2. Calculate Lightness ---
             const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
 
-            // --- Default State (Dark BG, Light Font) ---
-            // This is the base state, ALWAYS dark background, light font
+            // --- 3. Set Default State (Dark BG, Light Font) ---
             let bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
             let fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
             let currentBgHue = hue;
@@ -451,7 +463,7 @@
             let bgSat = 20; // Low saturation BG
             let fontSat = 80; // High saturation Font
 
-            // --- Phase 2: Flashing ---
+            // --- 4. Check for Phase 2: Flashing ---
             if (isFlashing) {
                 const now = timestamp;
 
@@ -464,16 +476,14 @@
                 // Check if we are CURRENTLY in a flash state
                 if (isCurrentlyFlashing) {
                     // We are in a flash. Swap the HUES only.
-                    // Hues are swapped
                     currentBgHue = (hue + flashHueJump) % 360; // Becomes the Font's original hue
                     currentFontHue = hue; // Becomes the BG's original hue
                     
-                    // *** FIX: DO NOT SWAP LIGHTNESS ***
-                    // Lightness remains dark-bg, light-font
-                    bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
-                    fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
+                    // Lightness remains dark-bg, light-font for readability
+                    bgLight = 10 + (lightnessOscillation * 20); 
+                    fontLight = 90 - (lightnessOscillation * 20);
                     
-                    // Saturations remain the same (low BG, high Font)
+                    // Saturations remain the same
                     bgSat = 20;
                     fontSat = 80;
 
@@ -486,7 +496,7 @@
                 // On frames *between* flashes, the default state logic runs.
             }
             
-            // Apply colors
+            // --- 5. Apply Colors ---
             body.style.setProperty('--bg-color', `hsl(${currentBgHue}, ${bgSat}%, ${bgLight}%)`);
             body.style.setProperty('--font-color', `hsl(${currentFontHue}, ${fontSat}%, ${fontLight}%)`);
 
