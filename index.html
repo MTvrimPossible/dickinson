@@ -6,9 +6,9 @@
     <title>Dickinson Poems</title>
     
     <!-- Import "Cinzel" font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+    <link href="[https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap](https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap)" rel="stylesheet">
     
     <style>
         body, html {
@@ -245,7 +245,7 @@
         async function loadAndParsePoems() {
             try {
                 // Pointing to the GitHub Pages URL.
-                let poemsUrl = 'https://MTvrimPossible.github.io/dickinson/dickinson.txt';
+                let poemsUrl = '[https://MTvrimPossible.github.io/dickinson/dickinson.txt](https://MTvrimPossible.github.io/dickinson/dickinson.txt)';
                 
                 console.log(`Attempting to fetch poems from: ${poemsUrl}`);
 
@@ -441,6 +441,7 @@
         // 900 * 1000ms = 900 seconds = 15 minutes for a full 360-degree loop
         const morphLoopDuration = 900 * 1000; 
 
+        // *** NEW, CORRECTED colorLoop LOGIC ***
         function colorLoop(timestamp) {
             // --- 1. Calculate Time-Based Hue ---
             if (morphStartTime === 0) {
@@ -465,12 +466,6 @@
             if (isFlashing) {
                 const now = timestamp;
 
-                // Check if it's time to START a new flash
-                if (!isCurrentlyFlashing && (now - lastFlashTime > flashInterval)) {
-                    isCurrentlyFlashing = true;
-                    lastFlashTime = now; // Mark the start of the flash
-                }
-
                 // Check if we are CURRENTLY in a flash state
                 if (isCurrentlyFlashing) {
                     // --- FLASH STATE ---
@@ -489,7 +484,7 @@
                     // 4. Check if the flash duration has ended
                     if (now - lastFlashTime > FLASH_DURATION) {
                         isCurrentlyFlashing = false;
-                        // On the *next* frame, the 'else' block will run
+                        lastFlashTime = now; // Reset timer for the *next* interval
                     }
                 } else {
                     // --- MORPH STATE ---
@@ -497,6 +492,12 @@
                     body.style.transition = morphTransition;
                     titleOverlay.style.transition = 'opacity 1.2s ease-in-out, ' + morphTransition;
                     // The default state (Hue A, Hue B) is already set
+
+                    // 2. Check if it's time to START a new flash
+                    if (now - lastFlashTime > flashInterval) {
+                        isCurrentlyFlashing = true;
+                        lastFlashTime = now; // Mark the start of the flash
+                    }
                 }
             }
             
