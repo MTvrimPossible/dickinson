@@ -20,8 +20,12 @@
             /* Color variables will be set by JavaScript */
             background-color: var(--bg-color, #111);
             color: var(--font-color, #eee);
-            /* UPDATED: Faster transition for the flash. 0.5s was too slow */
-            transition: background-color 0.1s linear, color 0.1s linear;
+            /* FIX: REMOVED the CSS transition. 
+              This was fighting with the requestAnimationFrame loop,
+              causing "chunky" or "non-existent" morphing on mobile.
+              The color changes are now 100% controlled by JavaScript.
+            */
+            transition: none;
         }
 
         #poem-container {
@@ -78,7 +82,9 @@
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
-            transition: opacity 1.2s ease-in-out, background-color 0.1s linear, color 0.1s linear; /* Added color transition */
+            /* FIX: REMOVED CSS transition here as well.
+            */
+            transition: opacity 1.2s ease-in-out;
         }
         
         #poem-title-numeral {
@@ -430,13 +436,14 @@
         const morphSpeed = 0.01; 
         const flashHueJump = 180; 
 
-        // *** NEW, REBUILT colorLoop FUNCTION ***
+        // *** RESTORED AND CORRECTED colorLoop FUNCTION ***
         function colorLoop(timestamp) {
             hue = (hue + morphSpeed) % 360;
             
             const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
 
             // --- Default State (Dark BG, Light Font) ---
+            // This is the base state, ALWAYS dark background, light font
             let bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
             let fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
             let currentBgHue = hue;
@@ -456,17 +463,17 @@
 
                 // Check if we are CURRENTLY in a flash state
                 if (isCurrentlyFlashing) {
-                    // We are in a flash. INVERT everything.
+                    // We are in a flash. Swap the HUES only.
                     // Hues are swapped
-                    currentBgHue = (hue + flashHueJump) % 360;
-                    currentFontHue = hue;
+                    currentBgHue = (hue + flashHueJump) % 360; // Becomes the Font's original hue
+                    currentFontHue = hue; // Becomes the BG's original hue
                     
-                    // Lightness is swapped
-                    bgLight = 90 - (lightnessOscillation * 20); // 90% to 70%
-                    fontLight = 10 + (lightnessOscillation * 20); // 10% to 30%
+                    // *** FIX: DO NOT SWAP LIGHTNESS ***
+                    // Lightness remains dark-bg, light-font
+                    bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
+                    fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
                     
                     // Saturations remain the same (low BG, high Font)
-                    // This creates the "light-tint bg" and "dark-vivid font"
                     bgSat = 20;
                     fontSat = 80;
 
