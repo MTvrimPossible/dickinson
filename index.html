@@ -435,20 +435,31 @@
         // --- COLOR & EFFECT LOGIC ---
 
         let hue = 200; // Starting hue
-        // FIX: This controls the *speed* of the morph. 
-        // 0.1 = 6 degrees/sec @ 60fps (60s loop)
-        const morphSpeed = 0.1; 
+        // FIX: Switched to delta-time animation.
+        // This is degrees per second. 360 / 300s = 1.2 deg/sec (5 min loop)
+        const morphDegreesPerSecond = 1.2; 
+        let lastTimestamp = 0; // For delta time calculation
+        
         const flashHueJump = 180; 
 
         // *** NEW, CORRECTED colorLoop LOGIC (No CSS transitions) ***
         function colorLoop(timestamp) {
-            // --- 1. Calculate Per-Frame Hue (Smooth Morph) ---
-            hue = (hue + morphSpeed) % 360; 
+            // --- 1. Calculate Delta Time ---
+            if (lastTimestamp === 0) {
+                lastTimestamp = timestamp;
+            }
+            const deltaTime = (timestamp - lastTimestamp) / 1000; // time in seconds
+            lastTimestamp = timestamp;
 
-            // --- 2. Calculate Lightness ---
+            // --- 2. Calculate Per-Frame Hue (Smooth Morph) ---
+            // morphSpeed is now degrees/sec * seconds_elapsed
+            const morphAmount = morphDegreesPerSecond * deltaTime;
+            hue = (hue + morphAmount) % 360; 
+
+            // --- 3. Calculate Lightness ---
             const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
 
-            // --- 3. Set Default State (Dark BG, Light Font) ---
+            // --- 4. Set Default State (Dark BG, Light Font) ---
             let bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
             let fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
             let currentBgHue = hue;
@@ -456,7 +467,7 @@
             let bgSat = 20; // Low saturation BG
             let fontSat = 80; // High saturation Font
 
-            // --- 4. Check for Phase 2: Flashing ---
+            // --- 5. Check for Phase 2: Flashing ---
             if (isFlashing) {
                 const now = timestamp;
 
@@ -483,7 +494,7 @@
                 }
             }
             
-            // --- 5. Apply Colors ---
+            // --- 6. Apply Colors ---
             // This happens every frame, for a smooth morph and instant flash
             body.style.setProperty('--bg-color', `hsl(${currentBgHue}, ${bgSat}%, ${bgLight}%)`);
             body.style.setProperty('--font-color', `hsl(${currentFontHue}, ${fontSat}%, ${fontLight}%)`);
