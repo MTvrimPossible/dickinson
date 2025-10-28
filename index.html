@@ -20,12 +20,11 @@
             /* Color variables will be set by JavaScript */
             background-color: var(--bg-color, #111);
             color: var(--font-color, #eee);
-            /* FIX: REMOVED the CSS transition. 
-              This was fighting with the requestAnimationFrame loop,
-              causing "chunky" or "non-existent" morphing on mobile.
-              The color changes are now 100% controlled by JavaScript.
+            /* FIX: This transition will now be CONTROLLED BY JAVASCRIPT.
+              We set a default smooth transition here for the morph.
+              JS will set this to 'none' for the flash.
             */
-            transition: none;
+            transition: background-color 1.0s linear, color 1.0s linear;
         }
 
         #poem-container {
@@ -82,9 +81,10 @@
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
-            /* FIX: REMOVED CSS transition here as well.
+            /* FIX: This also gets the smooth transition by default,
+              and JS will control it.
             */
-            transition: opacity 1.2s ease-in-out;
+            transition: opacity 1.2s ease-in-out, background-color 1.0s linear, color 1.0s linear;
         }
         
         #poem-title-numeral {
@@ -434,14 +434,12 @@
 
         let hue = 200; // Starting hue
         const flashHueJump = 180; 
-
-        // *** FIX: REFACTORED colorLoop to be TIME-BASED ***
-        // This fixes the morphing "not working" on mobile, as it's
-        // no longer dependent on a fixed 60fps frame rate.
+        const morphTransition = 'background-color 1.0s linear, color 1.0s linear';
+        const flashTransition = 'none';
 
         let morphStartTime = 0; // Will be set on first frame
-        // 600 * 1000ms = 600 seconds = 10 minutes for a full 360-degree loop
-        const morphLoopDuration = 600 * 1000; 
+        // 900 * 1000ms = 900 seconds = 15 minutes for a full 360-degree loop
+        const morphLoopDuration = 900 * 1000; 
 
         function colorLoop(timestamp) {
             // --- 1. Calculate Time-Based Hue ---
@@ -475,28 +473,35 @@
 
                 // Check if we are CURRENTLY in a flash state
                 if (isCurrentlyFlashing) {
-                    // We are in a flash. Swap the HUES only.
-                    currentBgHue = (hue + flashHueJump) % 360; // Becomes the Font's original hue
-                    currentFontHue = hue; // Becomes the BG's original hue
+                    // --- FLASH STATE ---
+                    // 1. Set transition to 'none' for an INSTANT flash
+                    body.style.transition = flashTransition;
+                    titleOverlay.style.transition = 'opacity 1.2s ease-in-out, ' + flashTransition;
+
+                    // 2. Swap the HUES only
+                    currentBgHue = (hue + flashHueJump) % 360; 
+                    currentFontHue = hue; 
                     
-                    // Lightness remains dark-bg, light-font for readability
+                    // 3. Lightness remains dark-bg, light-font
                     bgLight = 10 + (lightnessOscillation * 20); 
                     fontLight = 90 - (lightnessOscillation * 20);
                     
-                    // Saturations remain the same
-                    bgSat = 20;
-                    fontSat = 80;
-
-                    // Check if the flash duration has ended
+                    // 4. Check if the flash duration has ended
                     if (now - lastFlashTime > FLASH_DURATION) {
                         isCurrentlyFlashing = false;
-                        // The default state (defined above) will take over on the next frame
+                        // On the *next* frame, the 'else' block will run
                     }
+                } else {
+                    // --- MORPH STATE ---
+                    // 1. Set transition back to 'linear' for a SMOOTH morph
+                    body.style.transition = morphTransition;
+                    titleOverlay.style.transition = 'opacity 1.2s ease-in-out, ' + morphTransition;
+                    // The default state (Hue A, Hue B) is already set
                 }
-                // On frames *between* flashes, the default state logic runs.
             }
             
             // --- 5. Apply Colors ---
+            // This happens every frame, whether morphing or flashing
             body.style.setProperty('--bg-color', `hsl(${currentBgHue}, ${bgSat}%, ${bgLight}%)`);
             body.style.setProperty('--font-color', `hsl(${currentFontHue}, ${fontSat}%, ${fontLight}%)`);
 
