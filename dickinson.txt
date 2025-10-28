@@ -425,7 +425,7 @@ When floods have slit the hills,
 And scooped a turnpike for themselves,
 And blotted out the mills!
 
-I.
+XXVII.
 
 Mine by the right of the white election!
 Mine by the royal seal!
@@ -437,7 +437,7 @@ Mine, by the grave's repeal
 Titled, confirmed,—delirious charter!
 Mine, while the ages steal!
 
-II.
+XXVIII.
 
 You left me, sweet, two legacies,—
 A legacy of love
@@ -449,7 +449,7 @@ Capacious as the sea,
 Between eternity and time,
 Your consciousness and me.
 
-III.
+XXIX.
 
 Alter? When the hills do.
 Falter? When the sun
@@ -461,7 +461,7 @@ Doth of the dew:
 Even as herself, O friend!
 I will of you!
 
-IV.
+XXX.
 
 Elysium is as far as to
 The very nearest room,
@@ -473,7 +473,7 @@ That it can so endure
 The accent of a coming foot,
 The opening of a door!
 
-V.
+XXXI.
 
 Doubt me, my dim companion!
 Why, God would be content
@@ -494,7 +494,7 @@ Was that she might,
 Some distant heaven,
 Dwell timidly with thee!
 
-VI.
+XXXII.
 
 If you were coming in the fall,
 I'd brush the summer by
@@ -521,7 +521,7 @@ Of time's uncertain wing,
 It goads me, like the goblin bee,
 That will not state its sting.
 
-VII.
+XXXIII.
 
 I hide myself within my flower,
 That wearing on your breast,
@@ -533,7 +533,7 @@ That, fading from your vase,
 You, unsuspecting, feel for me
 Almost a loneliness.
 
-VIII.
+XXXIV.
 
 That I did always love,
 I bring thee proof:
@@ -550,7 +550,7 @@ Then have I
 Nothing to show
 But Calvary.
 
-IX.
+XXXV.
 
 Have you got a brook in your little heart,
 Where bashful flowers blow,
@@ -572,7 +572,7 @@ When the meadows parching lie,
 Beware, lest this little brook of life
 Some burning noon go dry!
 
-X.
+XXXVI.
 
 As if some little Arctic flower,
 Upon the polar hem,
@@ -587,7 +587,7 @@ To Eden wandered in—
 What then? Why, nothing, only,
 Your inference therefrom!
 
-XI.
+XXXV.
 
 My river runs to thee:
 Blue sea, wilt welcome me?
@@ -601,7 +601,7 @@ From spotted nooks,—
 Say, sea,
 Take me!
 
-XII.
+XXXVI.
 
 I cannot live with you,
 It would be life,
@@ -666,7 +666,7 @@ And prayer,
 And that pale sustenance,
 Despair!
 
-XIII.
+XXXXVII.
 
 There came a day at summer's full
 Entirely for me;
@@ -703,7 +703,7 @@ Deposed, at length, the grave—
 To that new marriage, justified
 Through Calvaries of Love!
 
-XIV.
+XXXVIII.
 
 I'm ceded, I've stopped being theirs;
 The name they dropped upon my face
@@ -727,7 +727,7 @@ But this time, adequate, erect,
 With will to choose or to reject.
 And I choose—just a throne.
 
-XV.
+XXXIX.
 
 'T was a long parting, but the time
 For interview had come;
@@ -749,7 +749,7 @@ A paradise, the host,
 And cherubim and seraphim
 The most familiar guest.
 
-XVI.
+XXXX.
 
 I'm wife; I've finished that,
 That other state;
@@ -766,7 +766,7 @@ That other kind was pain;
 But why compare?
 I'm wife! stop there!
 
-XVII.
+XL.
 
 She rose to his requirement, dropped
 The playthings of her life
@@ -783,7 +783,7 @@ Develops pearl and weed,
 But only to himself is known
 The fathoms they abide.
 
-XVIII.
+XLI.
 
 Come slowly, Eden!
 Lips unused to thee,
@@ -795,7 +795,7 @@ Round her chamber hums,
 Counts his nectars—enters,
 And is lost in balms!
 
-I.
+XLII.
 
 New feet within my garden go,
 New fingers stir the sod;
@@ -807,7 +807,7 @@ New weary sleep below;
 And still the pensive spring returns,
 And still the punctual snow!
 
-II.
+XLIII.
 
 Pink, small, and punctual,
 Aromatic, low,
@@ -824,7 +824,7 @@ Bedecked with thee,
 Nature forswears
 Antiquity.
 
-III.
+XLIV.
 
 The murmur of a bee
 A witchcraft yieldeth me.
@@ -844,7 +844,7 @@ If any ask me how,
 Artist, who drew me so,
 Must tell!
 
-IV.
+XLV.
 
 Perhaps you'd like to buy a flower?
 But I could never sell.
@@ -859,14 +859,14 @@ Their hock and sherry draw,
 Why, I will lend until just then,
 But not an hour more!
 
-V.
+XLVI.
 
 The pedigree of honey
 Does not concern the bee;
 A clover, any time, to him
 Is aristocracy.
 
-VI.
+XLVII.
 
 Some keep the Sabbath going to church;
 I keep it staying at home,
@@ -883,7 +883,7 @@ And the sermon is never long;
 So instead of getting to heaven at last,
 I'm going all along!
 
-VII.
+XLVIII.
 
 The bee is not afraid of me,
 I know the butterfly;
@@ -895,7 +895,7 @@ The breezes madder play.
 Wherefore, mine eyes, thy silver mists?
 Wherefore, O summer's day?
 
-VIII.
+XLIX.
 
 Some rainbow coming from the fair!
 Some vision of the world Cashmere
@@ -925,7 +925,7 @@ Behold! Whose multitudes are these?
 The children of whose turbaned seas,
 Or what Circassian land?
 
-IX.
+L.
 
 The grass so little has to do,—
 A sphere of simple green,
@@ -7586,6 +7586,7 @@ Thither I pilot thee,—
 Land, ho! Eternity!
 
    Ashore at last!
+
 
 
 
