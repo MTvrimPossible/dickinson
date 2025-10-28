@@ -19,15 +19,26 @@
             font-family: 'Cinzel', serif;
             
             /*
-              These variables are now set *only* by the JS colorLoop.
-              This ensures a 100% compatible, smooth, time-based morph
-              AND an instant, sharp flash.
+              FIX: Re-introduced CSS transitions.
+              This is the ONLY way to get a smooth morph on mobile.
+              The JS will update the color, and the CSS will animate it.
             */
-            --bg-color: hsl(200, 20%, 10%);
+            --bg-color: hsl(200, 30%, 10%);
             --font-color: hsl(20, 80%, 90%);
             
             background-color: var(--bg-color);
             color: var(--font-color);
+            
+            /* This is the key to the smooth morph */
+            transition: background-color 1.0s linear, color 1.0s linear;
+        }
+        
+        /*
+          FIX: This class is added by JS to *disable* the transition
+          only for the instant flash.
+        */
+        body.is-flashing {
+            transition: none;
         }
 
         #poem-container {
@@ -95,7 +106,17 @@
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
-            transition: opacity 1.2s ease-in-out;
+            
+            /* FIX: Overlay must also have the color transitions */
+            transition: opacity 1.2s ease-in-out, 
+                        background-color 1.0s linear, 
+                        color 1.0s linear;
+        }
+        
+        /* FIX: The overlay must *also* have its transition disabled
+           during the instant flash. */
+        body.is-flashing #poem-title-overlay {
+            transition: opacity 1.2s ease-in-out; /* Keep opacity transition */
         }
         
         #poem-title-numeral {
@@ -444,95 +465,109 @@
         // --- COLOR & EFFECT LOGIC ---
         
         /*
-          FIX: This is the robust, JS-only, time-capped loop.
-          It handles:
-          1. The smooth, time-capped morph (fixes mobile stutter).
-          2. The lightness oscillation.
-          3. The instant, hard-cut, color-wheel-opposite flash logic.
+          FIX: This is the new, robust logic.
+          1. A 'morphColors' loop (setTimeout) sets the color targets.
+          2. CSS 'transition' (1.0s) handles the smooth animation.
+          3. A 'flashLoop' (setTimeout) interrupts by adding a class
+             that sets 'transition: none' for an instant flash.
         */
 
         let hue = 200; // Starting hue
-        const morphDegreesPerSecond = 1.2; // 360 / 300s = 5 min loop
-        let lastTimestamp = 0; // For delta time calculation
+        let bgLight = 10;
+        let fontLight = 90;
+        let bgSat = 30;
+        let fontSat = 80;
         const flashHueJump = 180; // Color-wheel opposite
 
-        function colorLoop(timestamp) {
-            // --- 1. Calculate Delta Time & Cap It ---
-            if (lastTimestamp === 0) {
-                lastTimestamp = timestamp;
-            }
-            let deltaTime = timestamp - lastTimestamp; // time in milliseconds
+        /**
+         * This function runs every 1 second to set the *next*
+         * color target. The CSS transition handles the smooth
+         * animation *between* these 1-second steps.
+         */
+        function morphColors() {
+            // Morph hue over a 5-minute (300-second) cycle
+            hue = (hue + (360 / 300)) % 360; 
 
-            // *** CRITICAL FIX FOR MOBILE STUTTER ***
-            // If the time elapsed is huge (e.g., >100ms),
-            // it means the browser stuttered or was in another tab.
-            // Cap the delta to a normal frame (16.6ms) to prevent
-            // a visible "jump" or "click".
-            if (deltaTime > 100) {
-                deltaTime = 16.67;
-            }
-            lastTimestamp = timestamp;
-            // --- End Fix ---
-
-            // --- 2. Calculate Per-Frame Hue (Smooth Morph) ---
-            const morphAmount = (morphDegreesPerSecond / 1000) * deltaTime;
-            hue = (hue + morphAmount) % 360; 
-
-            // --- 3. Calculate Lightness ---
-            const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
-            let bgLight = 10 + (lightnessOscillation * 20); // 10% to 30%
-            let fontLight = 90 - (lightnessOscillation * 20); // 90% to 70%
-
-            // --- 4. Set Default Morph State (Dark BG, Light Font) ---
-            let currentBgHue = hue;
-            let currentFontHue = (hue + 180) % 360;
-            let bgSat = 20; // Low saturation BG
-            let fontSat = 80; // High saturation Font
-
-            // --- 5. Check for Phase 2: Flashing ---
-            if (isFlashing) {
-                const now = timestamp;
-
-                if (isCurrentlyFlashing) {
-                    // --- FLASH STATE (100ms duration) ---
-                    // This is the hard-cut, opposite-color flash.
-                    currentBgHue = (hue + flashHueJump) % 360; 
-                    currentFontHue = hue; 
-                    
-                    // Check if flash duration has ended
-                    if (now - lastFlashTime > FLASH_DURATION) {
-                        isCurrentlyFlashing = false;
-                        // We don't reset lastFlashTime here; the *interval*
-                        // starts from the *end* of the flash.
-                    }
-                } else {
-                    // --- MORPH STATE ---
-                    // (Default state is already set in step 4)
-                    // Check if it's time to START a new flash
-                    if (now - lastFlashTime > flashInterval) {
-                        isCurrentlyFlashing = true;
-                        lastFlashTime = now; // Mark the start of the flash
-                    }
-                }
-            }
+            // FIX: Oscillate LIGHTNESS from 10% to 90%
+            // This creates the "light and dark" effect.
+            // (Sine wave oscillating over ~60 seconds)
+            const lightnessOscillation = (Math.sin(Date.now() / 20000) + 1) / 2; // 0 to 1
+            bgLight = 10 + (lightnessOscillation * 80); // 10% (dark) to 90% (light)
             
-            // --- 6. Apply Colors Every Frame ---
-            body.style.setProperty('--bg-color', `hsl(${currentBgHue}, ${bgSat}%, ${bgLight}%)`);
-            body.style.setProperty('--font-color', `hsl(${currentFontHue}, ${fontSat}%, ${fontLight}%)`);
+            // FIX: Guarantee readability by inverting lightness
+            fontLight = (bgLight > 50) ? 10 : 90; 
+            
+            // FIX: Oscillate saturation for more variety
+            bgSat = 30 + (lightnessOscillation * 40); // 30% to 70%
+            fontSat = 70 + (1 - lightnessOscillation) * 20; // 70% to 90%
 
-            // Keep the loop running
-            requestAnimationFrame(colorLoop);
+            // Apply the new target colors
+            // The CSS transition will smoothly animate to these.
+            body.style.setProperty('--bg-color', `hsl(${hue}, ${bgSat}%, ${bgLight}%)`);
+            body.style.setProperty('--font-color', `hsl(${(hue + 180) % 360}, ${fontSat}%, ${fontLight}%)`);
+            
+            // Schedule the next morph step
+            setTimeout(morphColors, 1000); 
+        }
+
+        /**
+         * This function runs on a separate, accelerating interval
+         * to handle the *instant* flash.
+         */
+        function flashLoop() {
+            // Don't flash if Phase 2 isn't active
+            // or if we're already in the middle of a flash
+            if (!isFlashing || isCurrentlyFlashing) {
+                // Schedule the next *check*
+                setTimeout(flashLoop, flashInterval);
+                return;
+            }
+
+            // --- START FLASH ---
+            isCurrentlyFlashing = true;
+
+            // Calculate the flash colors (opposite hue, same lightness)
+            const flashBgHue = (hue + flashHueJump) % 360;
+            const flashFontHue = hue;
+
+            // 1. Add class to set 'transition: none'
+            body.classList.add('is-flashing');
+            
+            // 2. Apply the instant flash color
+            body.style.setProperty('--bg-color', `hsl(${flashBgHue}, ${bgSat}%, ${bgLight}%)`);
+            body.style.setProperty('--font-color', `hsl(${flashFontHue}, ${fontSat}%, ${fontLight}%)`);
+
+            // 3. Wait for the flash duration
+            setTimeout(() => {
+                // 4. Remove class to re-enable 'transition: 1.0s'
+                body.classList.remove('is-flashing');
+                
+                /*
+                  CRITICAL: We must re-apply the *morph* colors.
+                  The browser will now smoothly animate from the
+                  flash color *back* to the morph color.
+                */
+                body.style.setProperty('--bg-color', `hsl(${hue}, ${bgSat}%, ${bgLight}%)`);
+                body.style.setProperty('--font-color', `hsl(${(hue + 180) % 360}, ${fontSat}%, ${fontLight}%)`);
+                
+                isCurrentlyFlashing = false;
+                
+                // 5. Schedule the next flash check
+                setTimeout(flashLoop, flashInterval);
+                
+            }, FLASH_DURATION);
         }
 
 
         function accelerateFlashing() {
-            flashAccelerationStartTime = Date.Znow();
+            // This function no longer runs on rAF
+            // It just updates the 'flashInterval' variable
+            flashAccelerationStartTime = Date.now();
             
             function updateFlashInterval() {
                 const elapsedTime = Date.now() - flashAccelerationStartTime;
                 const progress = Math.min(elapsedTime / FLASH_ACCELERATION_DURATION, 1);
                 
-                // Linear interpolation from START interval to END interval
                 flashInterval = FLASH_INTERVAL_START + (FLASH_INTERVAL_END - FLASH_INTERVAL_START) * progress;
                 
                 if (progress < 1) {
@@ -551,8 +586,9 @@
          * Main initialization function
          */
         async function main() {
-            // Start the single, unified animation loop
-            requestAnimationFrame(colorLoop);
+            // Start the two independent loops
+            setTimeout(morphColors, 1000); // Start the morph loop
+            setTimeout(flashLoop, flashInterval); // Start the flash-check loop
 
             // 2. Load and parse the poems
             await loadAndParsePoems();
@@ -565,9 +601,6 @@
                 setTimeout(() => {
                     console.log("--- PHASE 2: Flashing Started ---");
                     isFlashing = true;
-                    // We also reset lastFlashTime here to start the
-                    // intervals fresh *after* the 5 min wait.
-                    lastFlashTime = performance.now();
                     accelerateFlashing();
                 }, PHASE_2_START_TIME);
 
