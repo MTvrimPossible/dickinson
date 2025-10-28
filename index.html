@@ -83,7 +83,9 @@
             width: 100%;
             overflow-wrap: break-word;
             
-            /* white-space will be toggled by JS */
+            /* FIX: Default to normal wrapping. JS will override to
+               'nowrap' *only* for the shrink-to-fit check. */
+            white-space: normal;
         }
 
         /* Style for the em-dash */
@@ -407,9 +409,9 @@
                 
                 // --- Font shrinking/wrapping logic ---
                 
-                // 1. Reset font size and white-space
+                // 1. Reset font size and set to nowrap for measuring
                 el.style.fontSize = ''; 
-                el.style.whiteSpace = 'nowrap'; // Force one line to measure
+                el.style.whiteSpace = 'nowrap';
                 
                 // 2. Set new line content
                 const processedLine = line.replace(/\s*-\s*/g, '<span class="em-dash">—</span>');
@@ -433,8 +435,9 @@
                 }
 
                 // 6. Check *again* after shrinking. If still overflowing, wrap.
+                // This is the fallback that guarantees no cutoff.
                 if (el.scrollWidth > containerWidth) {
-                    el.style.whiteSpace = 'normal'; // Allow wrapping as fallback
+                    el.style.whiteSpace = 'normal'; // Allow wrapping
                 }
                 // --- End of new logic ---
                 
