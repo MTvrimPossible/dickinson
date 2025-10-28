@@ -20,11 +20,10 @@
             /* Color variables will be set by JavaScript */
             background-color: var(--bg-color, #111);
             color: var(--font-color, #eee);
-            /* FIX: This transition will now be CONTROLLED BY JAVASCRIPT.
-              We set a default smooth transition here for the morph.
-              JS will set this to 'none' for the flash.
+            /* FIX: REMOVED ALL CSS color transitions. 
+              JavaScript's requestAnimationFrame will handle all color changes 
+              for a smooth morph AND an instant flash.
             */
-            transition: background-color 1.0s linear, color 1.0s linear;
         }
 
         #poem-container {
@@ -59,8 +58,10 @@
             opacity: 0;
             transition: opacity 1.2s ease-in-out, font-size 0.2s ease-out;
             
-            /* This is the key: it will be 'nowrap' */
-            white-space: nowrap; 
+            /* FIX: REMOVED 'white-space: nowrap'.
+              Text will now wrap by default if the shrink-logic isn't enough.
+              This guarantees NO cutoff and NO scrolling.
+            */
         }
 
         /* Style for the em-dash */
@@ -81,10 +82,10 @@
             z-index: 100;
             opacity: 0;
             pointer-events: none; /* Allows clicks through when hidden */
-            /* FIX: This also gets the smooth transition by default,
-              and JS will control it.
+            /* FIX: REMOVED CSS color transitions.
+              The opacity transition remains.
             */
-            transition: opacity 1.2s ease-in-out, background-color 1.0s linear, color 1.0s linear;
+            transition: opacity 1.2s ease-in-out;
         }
         
         #poem-title-numeral {
@@ -126,10 +127,9 @@
 
         /* Phase 3: Lenticular/Shiny Text */
         body.phase-3 .poem-line,
-        body.phase-3 #poem-title-numeral { /* ADDED: Title also gets polychrome */
+        body.phase-3 #poem-title-numeral {
             background-image: linear-gradient(
                 -45deg,
-                /* REMOVED bright yellow for readability */
                 #ff0000, #ff7300, #48ff00,
                 #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
             );
@@ -138,8 +138,8 @@
             -webkit-background-clip: text;
             color: transparent;
             animation: shine 8s linear infinite;
-            /* UPDATED: Switched to a white glow for readability on all backgrounds */
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.6), 0 0 2px rgba(255, 255, 255, 0.8);
+            /* FIX: Brighter, stronger white glow for readability */
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 4px rgba(255, 255, 255, 1);
         }
 
         @keyframes shine {
@@ -164,11 +164,10 @@
 
         /* Phase 4: Text Flicker */
         body.phase-4 .poem-line,
-        body.phase-4 #poem-title-numeral { /* ADDED: Title also flickers */
-            /* UPDATED: Flicker animation is now 0.2s, not 0.8s */
+        body.phase-4 #poem-title-numeral {
             animation: shine 8s linear infinite, flicker-bright 0.2s linear infinite;
-            /* UPDATED: Matching white glow for readability */
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.6), 0 0 2px rgba(255, 255, 255, 0.8);
+            /* FIX: Matching brighter, stronger white glow */
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 4px rgba(255, 255, 255, 1);
         }
 
     </style>
@@ -244,8 +243,6 @@
          */
         async function loadAndParsePoems() {
             try {
-                // FIX: This was a copy-paste error.
-                // Removed the [markdown](link) syntax.
                 let poemsUrl = 'https://MTvrimPossible.github.io/dickinson/dickinson.txt';
                 
                 console.log(`Attempting to fetch poems from: ${poemsUrl}`);
@@ -377,11 +374,11 @@
                 const line = stanza[i] || ""; // Get line or empty string
                 const el = lineElements[i];
                 
-                // --- Font shrinking logic (no wrap) ---
+                // --- Font shrinking logic (with wrap fallback) ---
                 
                 // 1. Reset styles from previous line
                 el.style.fontSize = ''; 
-                el.style.whiteSpace = 'nowrap'; // Always 'nowrap'
+                el.style.whiteSpace = 'nowrap'; // Temporarily set to nowrap
                 
                 // 2. Set new line content
                 const processedLine = line.replace(/\s*-\s*/g, '<span class="em-dash">—</span>');
@@ -397,10 +394,14 @@
                     // 5. It overflows. Shrink it.
                     // Use the PARENT container's width for the ratio
                     const ratio = parentWidth / el.scrollWidth;
-                    // Apply ratio. No minimum size. Let it get as small as needed.
-                    const newFontSize = Math.floor(defaultFontSize * ratio);
+                    // Apply ratio, with a 10px minimum
+                    const newFontSize = Math.max(Math.floor(defaultFontSize * ratio), 10); 
                     el.style.fontSize = `${newFontSize}px`;
                 }
+
+                // 6. NOW, set white-space to normal.
+                // If it was shrunk and still too long, it will wrap.
+                el.style.whiteSpace = 'normal'; 
                 // --- End of new logic ---
                 
                 // Fade In
@@ -434,23 +435,15 @@
         // --- COLOR & EFFECT LOGIC ---
 
         let hue = 200; // Starting hue
+        // FIX: This controls the *speed* of the morph. 
+        // 0.1 = 6 degrees/sec @ 60fps (60s loop)
+        const morphSpeed = 0.1; 
         const flashHueJump = 180; 
-        const morphTransition = 'background-color 1.0s linear, color 1.0s linear';
-        const flashTransition = 'none';
 
-        let morphStartTime = 0; // Will be set on first frame
-        // 900 * 1000ms = 900 seconds = 15 minutes for a full 360-degree loop
-        const morphLoopDuration = 900 * 1000; 
-
-        // *** NEW, CORRECTED colorLoop LOGIC ***
+        // *** NEW, CORRECTED colorLoop LOGIC (No CSS transitions) ***
         function colorLoop(timestamp) {
-            // --- 1. Calculate Time-Based Hue ---
-            if (morphStartTime === 0) {
-                morphStartTime = timestamp;
-            }
-            const morphElapsed = timestamp - morphStartTime;
-            const morphProgress = (morphElapsed / morphLoopDuration) % 1.0;
-            hue = morphProgress * 360; // Current hue (0-360)
+            // --- 1. Calculate Per-Frame Hue (Smooth Morph) ---
+            hue = (hue + morphSpeed) % 360; 
 
             // --- 2. Calculate Lightness ---
             const lightnessOscillation = (Math.sin(timestamp / 5000) + 1) / 2; // 0 to 1
@@ -470,31 +463,19 @@
                 // Check if we are CURRENTLY in a flash state
                 if (isCurrentlyFlashing) {
                     // --- FLASH STATE ---
-                    // 1. Set transition to 'none' for an INSTANT flash
-                    body.style.transition = flashTransition;
-                    titleOverlay.style.transition = 'opacity 1.2s ease-in-out, ' + flashTransition;
-
-                    // 2. Swap the HUES only
+                    // Swap the HUES only
                     currentBgHue = (hue + flashHueJump) % 360; 
                     currentFontHue = hue; 
                     
-                    // 3. Lightness remains dark-bg, light-font
-                    bgLight = 10 + (lightnessOscillation * 20); 
-                    fontLight = 90 - (lightnessOscillation * 20);
-                    
-                    // 4. Check if the flash duration has ended
+                    // Check if the flash duration has ended
                     if (now - lastFlashTime > FLASH_DURATION) {
                         isCurrentlyFlashing = false;
                         lastFlashTime = now; // Reset timer for the *next* interval
                     }
                 } else {
                     // --- MORPH STATE ---
-                    // 1. Set transition back to 'linear' for a SMOOTH morph
-                    body.style.transition = morphTransition;
-                    titleOverlay.style.transition = 'opacity 1.2s ease-in-out, ' + morphTransition;
-                    // The default state (Hue A, Hue B) is already set
-
-                    // 2. Check if it's time to START a new flash
+                    // (Default state is already set)
+                    // Check if it's time to START a new flash
                     if (now - lastFlashTime > flashInterval) {
                         isCurrentlyFlashing = true;
                         lastFlashTime = now; // Mark the start of the flash
@@ -503,7 +484,7 @@
             }
             
             // --- 5. Apply Colors ---
-            // This happens every frame, whether morphing or flashing
+            // This happens every frame, for a smooth morph and instant flash
             body.style.setProperty('--bg-color', `hsl(${currentBgHue}, ${bgSat}%, ${bgLight}%)`);
             body.style.setProperty('--font-color', `hsl(${currentFontHue}, ${fontSat}%, ${fontLight}%)`);
 
@@ -517,6 +498,7 @@
                 const elapsedTime = Date.now() - flashAccelerationStartTime;
                 const progress = Math.min(elapsedTime / FLASH_ACCELERATION_DURATION, 1);
                 
+                // Interpolate from START interval to END interval
                 flashInterval = FLASH_INTERVAL_START + (FLASH_INTERVAL_END - FLASH_INTERVAL_START) * progress;
                 
                 if (progress < 1) {
