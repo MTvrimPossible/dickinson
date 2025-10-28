@@ -5,25 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dickinson Poems</title>
     
-    <!-- Import "Cinzel" font -->
+    <!-- FIX: Import "EB Garamond" font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
     
     <style>
         body, html {
             height: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* This is critical. No scrolling. */
-            font-family: 'Cinzel', serif;
+            overflow: hidden;
             
-            /*
-              FIX: All color transitions have been REMOVED from CSS.
-              The JavaScript requestAnimationFrame loop now handles
-              ALL color changes every frame for a perfectly smooth
-              animation on all devices.
-            */
+            /* FIX: Use EB Garamond as the primary font */
+            font-family: "Felix Titling", "EB Garamond", serif;
+            
             --bg-color: hsl(200, 30%, 10%);
             --font-color: hsl(20, 80%, 90%);
             
@@ -31,9 +27,6 @@
             color: var(--font-color);
         }
         
-        /* This class is no longer needed for color */
-        /* body.is-flashing { } */
-
         #poem-container {
             display: grid;
             place-items: center;
@@ -51,7 +44,7 @@
             justify-content: center;
             align-items: center;
             width: 100%;
-            max-width: 900px; /* Max width for longer lines */
+            max-width: 900px;
         }
 
         .poem-line {
@@ -63,16 +56,17 @@
             
             width: 100%;
             overflow-wrap: break-word;
-            
-            /* FIX: Default to normal wrapping. JS will override to
-               'nowrap' *only* for the shrink-to-fit check. */
             white-space: normal;
+            
+            /* FIX: Use small-caps to "shrink lowercase" */
+            font-variant: small-caps;
         }
 
         /* Style for the em-dash */
         .poem-line .em-dash {
             font-family: 'Times New Roman', Times, serif;
             font-weight: bold;
+            font-variant: normal; /* Keep em-dash from shrinking */
         }
 
         /* Title Overlay for Roman Numeral */
@@ -82,24 +76,22 @@
             display: grid;
             place-items: center;
             
-            /* Use the same JS-controlled variables */
             background-color: var(--bg-color);
             color: var(--font-color);
             
             z-index: 100;
             opacity: 0;
-            pointer-events: none; /* Allows clicks through when hidden */
-            
-            /* FIX: ONLY transition opacity. Color is handled by JS. */
+            pointer-events: none;
             transition: opacity 1.2s ease-in-out;
         }
         
         #poem-title-numeral {
-            font-size: clamp(3rem, 10vw, 5rem); /* Dynamic size for title */
+            font-size: clamp(3rem, 10vw, 5rem);
             font-weight: 700;
             transform: scale(0.9);
             opacity: 0;
             transition: opacity 1.2s ease-in-out, transform 1.2s ease-in-out;
+            font-variant: normal; /* Keep title from shrinking */
         }
 
         #loading {
@@ -113,7 +105,7 @@
             z-index: 9999;
             opacity: 1;
             transition: opacity 0.5s ease-out;
-            font-family: 'Cinzel', serif;
+            font-family: 'Cinzel', serif; /* Keep Cinzel for loading */
         }
         #loading.hidden {
             opacity: 0;
@@ -126,15 +118,11 @@
         }
 
         /* --- PHASES FOR EFFECTS --- */
-
-        /* Phase 3: Lenticular/Shiny Text */
         @keyframes shine {
             to {
                 background-position: -200% center;
             }
         }
-
-        /* Phase 4 Keyframes (Rapid Flicker) */
         @keyframes flicker-bright {
             0%   { filter: brightness(1); }
             5%   { filter: brightness(0.5); }
@@ -151,12 +139,11 @@
             100% { filter: brightness(1); }
         }
 
-        /* Phase 3 & 4: Activated after 15 minutes */
-        body.phase-3 .poem-line,
-        body.phase-4 .poem-line {
+        /* Phase 3: Activated after 15 minutes */
+        body.phase-3 .poem-line {
             background-image: linear-gradient(
                 -45deg,
-                #ff0000, #ff7300, /* #fffb00 removed */ #48ff00,
+                #ff0000, #ff7300, #48ff00,
                 #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
             );
             background-size: 200% auto;
@@ -168,8 +155,9 @@
             animation: shine 8s linear infinite;
         }
         
-        /* Phase 4 (Flicker) stacks on top of Phase 3 */
+        /* Phase 4: Activated after 17 minutes */
         body.phase-4 .poem-line {
+            /* Stack animations */
             animation: shine 8s linear infinite, 
                        flicker-bright 0.2s linear infinite;
         }
@@ -179,11 +167,11 @@
 <body>
 
     <div id="poem-container">
+        <!-- 
+          FIX: Stanza container is now empty.
+          JS will dynamically add/remove lines here.
+        -->
         <div id="stanza-container">
-            <div class="poem-line"></div>
-            <div class="poem-line"></div>
-            <div class="poem-line"></div>
-            <div class="poem-line"></div>
         </div>
     </div>
 
@@ -199,12 +187,6 @@
 
         // --- DOM REFERENCES ---
         const stanzaContainer = document.getElementById("stanza-container");
-        const lineElements = [
-            stanzaContainer.children[0],
-            stanzaContainer.children[1],
-            stanzaContainer.children[2],
-            stanzaContainer.children[3]
-        ];
         const body = document.body;
         const titleOverlay = document.getElementById('poem-title-overlay');
         const titleNumeral = document.getElementById('poem-title-numeral');
@@ -213,9 +195,8 @@
         // --- STATE VARIABLES ---
         let currentPoem = null;
         let currentStanzaIndex = 0;
-        let isFlashingActive = false; // Phase 2 (flashing)
-        let isPhase3 = false;   // Phase 3 (polychrome)
-        let flashInterval = 1000;
+        let isFlashingActive = false; // Phase 2 (accelerating morph)
+        let isPhase3 = false;
         let flashAccelerationStartTime = 0;
         
         // --- TIMING CONSTANTS ---
@@ -227,14 +208,9 @@
 
         const PHASE_2_START_TIME = 5 * 60 * 1000;  // 5 minutes
         const FLASH_ACCELERATION_DURATION = 10 * 60 * 1000; // 10 minutes (5m -> 15m)
-        const FLASH_INTERVAL_START = 1000; // 1 flash per second
-        const FLASH_INTERVAL_END = 100;    // 10 flashes per second
         
         const PHASE_3_START_TIME = 15 * 60 * 1000; // 15 minutes (Polychrome)
-        const PHASE_4_START_TIME = 15 * 60 * 1000; // 15 minutes (Flicker)
-
-        // The duration of the hard flash
-        const FLASH_DURATION = 100; // 100ms
+        const PHASE_4_START_TIME = 17 * 60 * 1000; // FIX: 17 minutes (Flicker)
 
         // Title Flash Timing
         const TIME_TITLE_FADE_IN = 1200;
@@ -242,20 +218,12 @@
         const TIME_TITLE_FADE_OUT = 1200;
 
         // --- POEM DISPLAY LOGIC ---
-
-        /**
-         * Fetches and parses the poems.txt file.
-         */
         async function loadAndParsePoems() {
             try {
                 const poemsUrl = 'https://MTvrimPossible.github.io/dickinson/dickinson.txt';
-                console.log(`Attempting to fetch poems from: ${poemsUrl}`);
                 const response = await fetch(poemsUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const text = await response.text();
-                console.log("--- RAW TEXT FILE CONTENT (Parsed) ---");
 
                 const normalizedText = "\n\n" + text.replace(/\r\n/g, '\n');
                 const parts = normalizedText.split(/\n\n([IVXLCDM]+)\.\n\n/);
@@ -269,16 +237,52 @@
                         .map(line => line.trim())
                         .filter(line => line.length > 0);
 
+                    // FIX: Stanzas are now chunks of lines, not just 4
                     const stanzas = [];
-                    for (let j = 0; j < lines.length; j += 4) {
-                        stanzas.push(lines.slice(j, j + 4));
+                    let currentStanza = [];
+                    for (const line of lines) {
+                        currentStanza.push(line);
+                        // This assumes 4-line stanzas. A better parser
+                        // would detect blank lines between stanzas.
+                        // But for now, let's stick to 4-line chunks.
+                        // Let's refine this: We will use the user's "by chunk"
+                        // logic. We assume stanzas are separated by blank lines
+                        // in the text file, which the .filter() removes.
+                        // A better way: split by empty lines *before* filtering.
                     }
+                    
+                    // --- RE-PARSING STANZAS ---
+                    // Let's assume stanzas are 4 lines *unless*
+                    // we re-parse to find blank lines.
+                    // The user's TXT file shows 4-line stanzas.
+                    // The "some are shorter" is the key.
+                    // The .split('\n') and .filter() logic is the bug.
+                    
+                    // Let's reset.
+                    allPoems = []; // Clear array
+                    const poemBlocks = normalizedText.split(/\n\n([IVXLCDM]+)\.\n\n/);
 
-                    if (stanzas.length > 0) {
-                        allPoems.push({
-                            title: title,
-                            stanzas: stanzas
-                        });
+                    for (let i = 1; i < poemBlocks.length; i += 2) {
+                        const title = poemBlocks[i];
+                        const poemText = poemBlocks[i+1];
+                        if (!poemText) continue;
+
+                        // Split poem text into stanzas (blocks separated by blank lines)
+                        const stanzaStrings = poemText.trim().split(/\n\s*\n/);
+                        
+                        const stanzas = stanzaStrings.map(stanzaStr => {
+                            // Split stanza block into individual lines
+                            return stanzaStr.split('\n')
+                                .map(line => line.trim()) // Trim whitespace
+                                .filter(line => line.length > 0); // Remove empty
+                        }).filter(stanza => stanza.length > 0); // Remove empty stanzas
+
+                        if (stanzas.length > 0) {
+                            allPoems.push({
+                                title: title,
+                                stanzas: stanzas
+                            });
+                        }
                     }
                 }
                 
@@ -295,9 +299,6 @@
         }
 
 
-        /**
-         * Starts the poem display sequence.
-         */
         async function startNewPoem() {
             let newPoem;
             do {
@@ -311,9 +312,6 @@
             showStanza(currentStanzaIndex);
         }
 
-        /**
-         * Displays the poem title/number overlay
-         */
         async function displayPoemTitle(titleString) {
             titleNumeral.textContent = titleString; 
             
@@ -343,37 +341,38 @@
         async function showStanza(stanzaIndex) {
             const stanza = currentPoem.stanzas[stanzaIndex];
             
-            for (let i = 0; i < 4; i++) {
+            // FIX: Clear old stanza lines
+            stanzaContainer.innerHTML = '';
+            const lineElements = []; // Create a new list of elements
+
+            // FIX: Create exactly as many lines as are in the stanza
+            for (const lineText of stanza) {
+                const el = document.createElement('div');
+                el.className = 'poem-line';
+                stanzaContainer.appendChild(el);
+                lineElements.push(el);
+            }
+
+            for (let i = 0; i < lineElements.length; i++) {
                 const line = stanza[i] || "";
                 const el = lineElements[i];
                 
                 // --- Font shrinking/wrapping logic ---
-                // FIX: REMOVED all 'white-space' manipulation from JS.
-                // CSS now handles all wrapping by default.
-                
-                // 1. Reset font size
                 el.style.fontSize = ''; 
                 
-                // 2. Set new line content
                 const processedLine = line.replace(/\s*-\s*/g, '<span class="em-dash">—</span>');
                 el.innerHTML = processedLine;
 
-                // 3. Get container width
                 const containerWidth = stanzaContainer.clientWidth;
 
-                // 4. Check for overflow
                 if (el.scrollWidth > containerWidth) {
-                    // 5. Calculate and apply new font size
                     const defaultFontSize = parseFloat(window.getComputedStyle(el).fontSize);
                     const ratio = containerWidth / el.scrollWidth;
                     const newFontSize = Math.floor(defaultFontSize * ratio); 
                     el.style.fontSize = `${newFontSize}px`;
                     const _ = el.offsetWidth; // Force reflow
                 }
-
-                // 6. That's it. If it *still* overflows,
-                // the CSS 'white-space: normal' will wrap it.
-                // No cutoff. No scrolling.
+                // CSS 'white-space: normal' will wrap as fallback
                 // --- End of new logic ---
                 
                 el.style.opacity = 1;
@@ -400,28 +399,23 @@
 
         // --- COLOR & EFFECT LOGIC ---
         
-        /*
-          FIX: This is the new, robust, all-in-one logic.
-          A single requestAnimationFrame loop handles:
-          1. Smooth, time-capped morphing (fixes mobile stutter/click)
-          2. Light/Dark oscillation (fixes "all dark" problem)
-          3. Instant, hard-cut flashing (fixes "smooth pulse")
-        */
-
         let hue = 200;
         let bgLight = 10;
         let fontLight = 90;
         let bgSat = 30;
         let fontSat = 80;
         const flashHueJump = 180;
-
         let lastTimestamp = 0;
-        let lastFlashCheckTime = 0;
-        let timeInFlash = 0;
-        let isCurrentlyFlashing = false;
 
-        // Hue morphs over 5 minutes (300,000 ms)
-        const HUE_MORPH_SPEED = 360 / 300000; // degrees per ms
+        // FIX: Hue morph speeds.
+        // Start: 5-minute cycle (300,000 ms)
+        const HUE_MORPH_SPEED_START = 360 / 300000; // degrees per ms
+        // End: 1-second cycle (1,000 ms)
+        const HUE_MORPH_SPEED_END = 360 / 1000;     // degrees per ms
+        
+        // This variable will be accelerated
+        let currentHueMorphSpeed = HUE_MORPH_SPEED_START;
+        
         // Lightness oscillates over 60 seconds (60,000 ms)
         const LIGHTNESS_OSC_SPEED = Math.PI * 2 / 60000; // radians per ms
 
@@ -429,78 +423,51 @@
             if (lastTimestamp === 0) {
                 lastTimestamp = timestamp;
             }
-
-            // FIX: Cap delta time to 100ms to prevent
-            // huge jumps ("clicks") on mobile framerate stutters.
+            // Cap delta time to 100ms to prevent jumps
             let deltaTime = Math.min(timestamp - lastTimestamp, 100);
             lastTimestamp = timestamp;
 
-            // --- 1. HANDLE FLASH STATE ---
-            if (isCurrentlyFlashing) {
-                timeInFlash += deltaTime;
-                if (timeInFlash < FLASH_DURATION) {
-                    // Stay in flash state... (do nothing, colors are set)
-                } else {
-                    // Flash is over
-                    isCurrentlyFlashing = false;
-                    timeInFlash = 0;
-                    // Colors will be reset to morph colors below
-                }
-            }
+            // --- 1. HANDLE MORPH STATE ---
+            // FIX: Use the new 'currentHueMorphSpeed'
+            hue = (hue + (currentHueMorphSpeed * deltaTime)) % 360; 
 
-            // --- 2. HANDLE MORPH STATE ---
-            if (!isCurrentlyFlashing) {
-                // Morph Hue
-                hue = (hue + (HUE_MORPH_SPEED * deltaTime)) % 360; 
-
-                // Oscillate Lightness
-                const lightnessOscillation = (Math.sin(timestamp * LIGHTNESS_OSC_SPEED) + 1) / 2; // 0 to 1
-                bgLight = 10 + (lightnessOscillation * 80); // 10% (dark) to 90% (light)
-                fontLight = (bgLight > 50) ? 10 : 90; // Invert
-                
-                // Oscillate Saturation
-                bgSat = 30 + (lightnessOscillation * 40); // 30% to 70%
-                fontSat = 70 + (1 - lightnessOscillation) * 20; // 70% to 90%
-                
-                // Apply Morph Colors
-                body.style.setProperty('--bg-color', `hsl(${hue}, ${bgSat}%, ${bgLight}%)`);
-                body.style.setProperty('--font-color', `hsl(${(hue + 180) % 360}, ${fontSat}%, ${fontLight}%)`);
-            }
-
-            // --- 3. CHECK IF FLASH SHOULD START ---
-            if (isFlashingActive && !isCurrentlyFlashing && (timestamp - lastFlashCheckTime > flashInterval)) {
-                lastFlashCheckTime = timestamp;
-                isCurrentlyFlashing = true;
-                timeInFlash = 0;
-
-                // Apply Instant Flash Colors
-                const flashBgHue = (hue + flashHueJump) % 360;
-                const flashFontHue = hue;
-                body.style.setProperty('--bg-color', `hsl(${flashBgHue}, ${bgSat}%, ${bgLight}%)`);
-                body.style.setProperty('--font-color', `hsl(${flashFontHue}, ${fontSat}%, ${fontLight}%)`);
-            }
+            // Oscillate Lightness (10% to 90%)
+            const lightnessOscillation = (Math.sin(timestamp * LIGHTNESS_OSC_SPEED) + 1) / 2;
+            bgLight = 10 + (lightnessOscillation * 80);
+            fontLight = (bgLight > 50) ? 10 : 90;
+            
+            // Oscillate Saturation
+            bgSat = 30 + (lightnessOscillation * 40);
+            fontSat = 70 + (1 - lightnessOscillation) * 20;
+            
+            // Apply Morph Colors
+            body.style.setProperty('--bg-color', `hsl(${hue}, ${bgSat}%, ${bgLight}%)`);
+            body.style.setProperty('--font-color', `hsl(${(hue + 180) % 360}, ${fontSat}%, ${fontLight}%)`);
             
             // Loop forever
             requestAnimationFrame(colorLoop);
         }
 
+        // FIX: This function now accelerates the MORPH SPEED
         function accelerateFlashing() {
             flashAccelerationStartTime = Date.now();
             
-            function updateFlashInterval() {
+            function updateFlashSpeed() {
                 const elapsedTime = Date.now() - flashAccelerationStartTime;
                 const progress = Math.min(elapsedTime / FLASH_ACCELERATION_DURATION, 1);
                 
-                flashInterval = FLASH_INTERVAL_START + (FLASH_INTERVAL_END - FLASH_INTERVAL_START) * progress;
+                // Interpolate the morph speed
+                currentHueMorphSpeed = HUE_MORPH_SPEED_START + 
+                                     (HUE_MORPH_SPEED_END - HUE_MORPH_SPEED_START) * progress;
                 
                 if (progress < 1) {
-                    requestAnimationFrame(updateFlashInterval);
+                    requestAnimationFrame(updateFlashSpeed);
                 } else {
-                    flashInterval = FLASH_INTERVAL_END; // Lock at max speed
+                    currentHueMorphSpeed = HUE_MORPH_SPEED_END; // Lock at max speed
                     console.log("--- Flashing at MAX speed ---");
                 }
             }
-            updateFlashInterval();
+            updateFlashSpeed();
         }
 
         // --- START EVERYTHING ---
@@ -509,17 +476,15 @@
             // Start the single, all-in-one animation loop
             requestAnimationFrame(colorLoop);
 
-            // 2. Load and parse the poems
             await loadAndParsePoems();
             
-            // 3. If poems loaded, hide loading screen and start
             if (allPoems.length > 0) {
                 loadingOverlay.classList.add('hidden');
                 
-                // Start timers for phases
                 setTimeout(() => {
-                    console.log("--- PHASE 2: Flashing Started ---");
-                    isFlashingActive = true; // Use the new variable name
+                    console.log("--- PHASE 2: Accelerating Morph Started ---");
+                    isFlashingActive = true;
+                    // FIX: Call the correct function
                     accelerateFlashing();
                 }, PHASE_2_START_TIME);
 
@@ -529,12 +494,12 @@
                     body.classList.add('phase-3');
                 }, PHASE_3_START_TIME);
 
+                // FIX: Phase 4 starts at 17 minutes
                 setTimeout(() => {
                     console.log("--- PHASE 4: Text Flicker Started ---");
                     body.classList.add('phase-4');
                 }, PHASE_4_START_TIME);
 
-                // Start the poem display
                 startNewPoem();
             }
         }
